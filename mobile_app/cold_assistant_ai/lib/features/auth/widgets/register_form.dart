@@ -41,8 +41,9 @@ class _RegisterFormState extends State<RegisterForm> {
     final pass = passCtrl.text;
     final confirm = confirmCtrl.text;
 
-    if (name.isEmpty || email.isEmpty || pass.isEmpty || confirm.isEmpty)
+    if (name.isEmpty || email.isEmpty || pass.isEmpty || confirm.isEmpty) {
       return;
+    }
 
     setState(() => loading = true);
     try {

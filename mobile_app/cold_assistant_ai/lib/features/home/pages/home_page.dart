@@ -118,7 +118,7 @@ class _HomePageState extends State<HomePage> {
     }
 
     try {
-      final response = await _chatSession!.sendMessage(Content.text(text));
+      final response = await _chatSession.sendMessage(Content.text(text));
       final replyText = response.text ?? "Yanıt alınamadı.";
       
       if (mounted) {
@@ -195,11 +195,11 @@ class _HomePageState extends State<HomePage> {
             Container(
               padding: const EdgeInsets.all(22),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.88),
+                color: Colors.white.withValues(alpha: 0.88),
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
+                    color: Colors.black.withValues(alpha: 0.06),
                     blurRadius: 18,
                     offset: const Offset(0, 8),
                   ),
@@ -362,7 +362,7 @@ class _HomePageState extends State<HomePage> {
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
+                                color: Colors.black.withValues(alpha: 0.08),
                                 blurRadius: 12,
                                 offset: const Offset(0, 6),
                               ),
@@ -381,11 +381,11 @@ class _HomePageState extends State<HomePage> {
             child: Container(
               height: 78,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.95),
+                color: Colors.white.withValues(alpha: 0.95),
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
+                    color: Colors.black.withValues(alpha: 0.08),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
@@ -448,11 +448,11 @@ class _AssistantChatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -685,7 +685,7 @@ class _AnimatedHeroCardState extends State<_AnimatedHeroCard> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.blue.withOpacity(0.18),
+              color: Colors.blue.withValues(alpha: 0.18),
               blurRadius: 22,
               offset: const Offset(0, 10),
             ),
@@ -776,7 +776,7 @@ class _InfoCard extends StatelessWidget {
       height: 150,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.9),
+        color: Colors.white.withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(22),
       ),
       child: Column(

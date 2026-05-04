@@ -7,7 +7,6 @@ import '../widgets/add_product_options_sheet.dart';
 import '../widgets/empty_fridge_view.dart';
 import '../widgets/fridge_item_card.dart';
 import 'scan_product_page.dart';
-import 'scan_product_page.dart';
 
 class MyFridgePage extends StatefulWidget {
   final Language lang;
@@ -139,7 +138,7 @@ class _MyFridgePageState extends State<MyFridgePage> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF1D4ED8).withOpacity(0.45),
+                      color: const Color(0xFF1D4ED8).withValues(alpha: 0.45),
                       blurRadius: 22,
                       offset: const Offset(0, 10),
                     ),
@@ -165,7 +164,7 @@ class _MyFridgePageState extends State<MyFridgePage> {
                       child: Text(
                         AppTexts.of("add_product", lang),
                         style: const TextStyle(
-                          color: const Color(0xFF1D4ED8),
+                          color: Color(0xFF1D4ED8),
                           fontSize: 19,
                           fontWeight: FontWeight.w900,
                         ),

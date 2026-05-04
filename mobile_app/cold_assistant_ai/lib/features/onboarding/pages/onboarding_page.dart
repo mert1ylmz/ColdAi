@@ -132,7 +132,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         child: Column(
           children: [
             DropdownButtonFormField<String>(
-              value: selectedUsageArea,
+              initialValue: selectedUsageArea,
               items: _buildUsageAreaItems(lang),
               decoration: InputDecoration(
                 labelText: AppTexts.of("usage_area", lang),
@@ -146,7 +146,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: selectedEnergyClass,
+              initialValue: selectedEnergyClass,
               items: _buildEnergyClassItems(),
               decoration: InputDecoration(
                 labelText: AppTexts.of("energy_class", lang),

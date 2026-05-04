@@ -1,5 +1,5 @@
 """
-ColdAI — İki Aşamalı Expert Model Inference Pipeline
+ColdAI — İki Aşamalı Expert Model Inference Pipeline (TFLite)
 
 Akış:
   Görüntü → Ön-İşleme → Ana Model → Kategori (meyve/sebze/paketli)
@@ -34,12 +34,12 @@ logger = logging.getLogger(__name__)
 
 def _run_inference(model_key: str, img_array: np.ndarray) -> np.ndarray:
     """
-    Senkron model inference.
-    TensorFlow predict() CPU-bound olduğundan ayrı thread'de çalıştırılır.
+    Senkron TFLite model inference.
+    TFLite invoke() CPU-bound olduğundan ayrı thread'de çalıştırılır.
     """
     model = model_cache.get_model(model_key)
-    predictions = model.predict(img_array, verbose=0)
-    return predictions[0]  # Batch boyutunu kaldır
+    predictions = model.predict(img_array)
+    return predictions
 
 
 async def predict_product(image_bytes: bytes) -> dict:
