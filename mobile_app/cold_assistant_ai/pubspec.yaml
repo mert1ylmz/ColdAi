@@ -19,8 +19,19 @@ dependencies:
   firebase_auth: ^5.0.0
   cloud_firestore: ^5.4.0
 
+  # HTTP (API için)
+  http: ^1.2.2
+
+  # Kamera & Galeri
+  image_picker: ^1.1.2
+
+  # 🔥 MIME TYPE FIX (çok önemli)
+  mime: ^1.0.6
+  http_parser: ^4.0.2
+
   # Splash
   flutter_native_splash: ^2.4.4
+  google_generative_ai: ^0.4.7
 
 dev_dependencies:
   flutter_test:
