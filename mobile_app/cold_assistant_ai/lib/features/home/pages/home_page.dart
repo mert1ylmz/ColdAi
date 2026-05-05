@@ -27,7 +27,7 @@ class _HomePageState extends State<HomePage> {
   bool _isTyping = false;
   
   // TODO: Paste your API key here or provide it in the chat
-  static const String _geminiApiKey = 'AIzaSyBYGpk-MEiPoBi3XTcNPOg-96UZqPfgzZ0'; 
+  static const String _geminiApiKey = '[YOUR API KEY]'; 
   late final GenerativeModel? _model;
   late final ChatSession? _chatSession;
 
