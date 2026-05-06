@@ -33,6 +33,16 @@ dependencies:
   flutter_native_splash: ^2.4.4
   google_generative_ai: ^0.4.7
 
+  # AI & OCR (Local)
+  tflite_flutter: ^0.10.4
+  image: ^4.2.0
+  google_mlkit_text_recognition: ^0.14.0
+  
+  # Local Storage
+  sqflite: ^2.3.3+3
+  path_provider: ^2.1.4
+  path: ^1.9.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -42,6 +52,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/models/
 
 flutter_native_splash:
   color: "#FFFFFF"

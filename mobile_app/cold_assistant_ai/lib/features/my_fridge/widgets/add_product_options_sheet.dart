@@ -6,12 +6,14 @@ import '../../../core/localization/language.dart';
 class AddProductOptionsSheet extends StatelessWidget {
   final Language lang;
   final VoidCallback onCameraTap;
+  final VoidCallback onReceiptTap;
   final VoidCallback onManualTap;
 
   const AddProductOptionsSheet({
     super.key,
     required this.lang,
     required this.onCameraTap,
+    required this.onReceiptTap,
     required this.onManualTap,
   });
 
@@ -45,6 +47,12 @@ class AddProductOptionsSheet extends StatelessWidget {
               icon: Icons.camera_alt_outlined,
               title: AppTexts.of("add_with_camera", lang),
               onTap: onCameraTap,
+            ),
+            const SizedBox(height: 12),
+            _OptionTile(
+              icon: Icons.receipt_long_outlined,
+              title: AppTexts.of("add_with_receipt", lang),
+              onTap: onReceiptTap,
             ),
             const SizedBox(height: 12),
             _OptionTile(

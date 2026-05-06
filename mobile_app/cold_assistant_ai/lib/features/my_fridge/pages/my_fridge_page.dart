@@ -7,6 +7,9 @@ import '../widgets/add_product_options_sheet.dart';
 import '../widgets/empty_fridge_view.dart';
 import '../widgets/fridge_item_card.dart';
 import 'scan_product_page.dart';
+import 'scan_receipt_page.dart';
+
+import '../../../core/services/database_service.dart';
 
 class MyFridgePage extends StatefulWidget {
   final Language lang;
@@ -18,26 +21,22 @@ class MyFridgePage extends StatefulWidget {
 }
 
 class _MyFridgePageState extends State<MyFridgePage> {
-  final List<FridgeItemModel> _items = [
-    FridgeItemModel(
-      id: '1',
-      name: 'Süt',
-      category: 'Dairy',
-      quantity: '1 L',
-      note: 'Laktozsuz',
-      createdAt: DateTime(2026, 4, 19),
-      expiryDate: DateTime(2026, 4, 24),
-    ),
-    FridgeItemModel(
-      id: '2',
-      name: 'Domates',
-      category: 'Vegetable',
-      quantity: '4',
-      note: '',
-      createdAt: DateTime(2026, 4, 18),
-      expiryDate: DateTime(2026, 4, 25),
-    ),
-  ];
+  List<FridgeItemModel> _items = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadItems();
+  }
+
+  Future<void> _loadItems() async {
+    final items = await DatabaseService().getItems();
+    setState(() {
+      _items = items;
+      _isLoading = false;
+    });
+  }
 
   void _showAddProductOptions() {
     showModalBottomSheet(
@@ -60,15 +59,29 @@ class _MyFridgePageState extends State<MyFridgePage> {
             );
 
             if (result != null && result is FridgeItemModel) {
-              setState(() {
-                _items.add(result);
-              });
+              await DatabaseService().insertItem(result);
+              _loadItems(); // Listeyi yenile
 
-              ScaffoldMessenger.of(this.context).showSnackBar(
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(AppTexts.of("product_saved", widget.lang)),
                 ),
               );
+            }
+          },
+          onReceiptTap: () async {
+            Navigator.pop(context);
+
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ScanReceiptPage(lang: widget.lang),
+              ),
+            );
+
+            if (result == true) {
+              _loadItems(); // Listeyi yenile
             }
           },
           onManualTap: () {
@@ -180,7 +193,9 @@ class _MyFridgePageState extends State<MyFridgePage> {
               ),
             ),
             const SizedBox(height: 22),
-            if (_items.isEmpty)
+            if (_isLoading)
+              const Center(child: CircularProgressIndicator())
+            else if (_items.isEmpty)
               EmptyFridgeView(lang: lang)
             else
               ..._items.map(
