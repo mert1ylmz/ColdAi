@@ -25,9 +25,9 @@ class _HomePageState extends State<HomePage> {
   final TextEditingController _messageController = TextEditingController();
   final List<_ChatMessage> _messages = [];
   bool _isTyping = false;
-  
+
   // TODO: Paste your API key here or provide it in the chat
-  static const String _geminiApiKey = 'AIzaSyBYGpk-MEiPoBi3XTcNPOg-96UZqPfgzZ0'; 
+  static const String _geminiApiKey = '[YOUR API KEY]';
   late final GenerativeModel? _model;
   late final ChatSession? _chatSession;
 
@@ -42,7 +42,10 @@ class _HomePageState extends State<HomePage> {
     );
 
     if (_geminiApiKey.isNotEmpty) {
-      _model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: _geminiApiKey);
+      _model = GenerativeModel(
+        model: 'gemini-2.5-flash',
+        apiKey: _geminiApiKey,
+      );
       _chatSession = _model!.startChat();
     } else {
       _model = null;
@@ -108,7 +111,8 @@ class _HomePageState extends State<HomePage> {
           _isTyping = false;
           _messages.add(
             _ChatMessage(
-              text: "API anahtarı eksik. Lütfen geliştiriciye API anahtarını verin veya koda ekleyin.",
+              text:
+                  "API anahtarı eksik. Lütfen geliştiriciye API anahtarını verin veya koda ekleyin.",
               isUser: false,
             ),
           );
@@ -120,7 +124,7 @@ class _HomePageState extends State<HomePage> {
     try {
       final response = await _chatSession.sendMessage(Content.text(text));
       final replyText = response.text ?? "Yanıt alınamadı.";
-      
+
       if (mounted) {
         setState(() {
           _isTyping = false;
@@ -502,7 +506,10 @@ class _AssistantChatCard extends StatelessWidget {
                   return const Align(
                     alignment: Alignment.centerLeft,
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -512,7 +519,10 @@ class _AssistantChatCard extends StatelessWidget {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           ),
                           SizedBox(width: 8),
-                          Text("Yazıyor...", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                          Text(
+                            "Yazıyor...",
+                            style: TextStyle(color: Colors.grey, fontSize: 12),
+                          ),
                         ],
                       ),
                     ),
