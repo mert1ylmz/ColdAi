@@ -26,8 +26,9 @@ class _HomePageState extends State<HomePage> {
   final TextEditingController _messageController = TextEditingController();
   final List<_ChatMessage> _messages = [];
   bool _isTyping = false;
-  
-  static const String _geminiApiKey = 'AIzaSyDuifSPHcNDU3Im8XSktESqvRpW0p5EqsU'; 
+
+  // TODO: Paste your API key here or provide it in the chat
+  static const String _geminiApiKey = '[YOUR API KEY]';
   late final GenerativeModel? _model;
   late final ChatSession? _chatSession;
   late final Stream<DocumentSnapshot<Map<String, dynamic>>> _userStream;
@@ -260,7 +261,10 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 12),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.primary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
@@ -387,11 +391,28 @@ class _HomePageState extends State<HomePage> {
                           borderRadius: BorderRadius.circular(24),
                         ),
                         itemBuilder: (context) => [
-                          _buildPopupItem('profile', Icons.person_rounded, AppTexts.of("profile", lang)),
-                          _buildPopupItem('notifications', Icons.notifications_rounded, AppTexts.of("notifications", lang)),
-                          _buildPopupItem('settings', Icons.settings_outlined, AppTexts.of("settings", lang)),
+                          _buildPopupItem(
+                            'profile',
+                            Icons.person_rounded,
+                            AppTexts.of("profile", lang),
+                          ),
+                          _buildPopupItem(
+                            'notifications',
+                            Icons.notifications_rounded,
+                            AppTexts.of("notifications", lang),
+                          ),
+                          _buildPopupItem(
+                            'settings',
+                            Icons.settings_outlined,
+                            AppTexts.of("settings", lang),
+                          ),
                           const PopupMenuDivider(),
-                          _buildPopupItem('logout', Icons.logout_rounded, AppTexts.of("logout", lang), isDestructive: true),
+                          _buildPopupItem(
+                            'logout',
+                            Icons.logout_rounded,
+                            AppTexts.of("logout", lang),
+                            isDestructive: true,
+                          ),
                         ],
                         child: Container(
                           width: 44,
@@ -399,7 +420,10 @@ class _HomePageState extends State<HomePage> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: Colors.white,
-                            border: Border.all(color: AppColors.border, width: 1.5),
+                            border: Border.all(
+                              color: AppColors.border,
+                              width: 1.5,
+                            ),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.05),
@@ -408,7 +432,11 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ],
                           ),
-                          child: const Icon(Icons.person_rounded, color: AppColors.primary, size: 24),
+                          child: const Icon(
+                            Icons.person_rounded,
+                            color: AppColors.primary,
+                            size: 24,
+                          ),
                         ),
                       ),
                     ),
@@ -422,12 +450,21 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  PopupMenuItem<String> _buildPopupItem(String value, IconData icon, String label, {bool isDestructive = false}) {
+  PopupMenuItem<String> _buildPopupItem(
+    String value,
+    IconData icon,
+    String label, {
+    bool isDestructive = false,
+  }) {
     return PopupMenuItem(
       value: value,
       child: Row(
         children: [
-          Icon(icon, size: 20, color: isDestructive ? AppColors.error : AppColors.text),
+          Icon(
+            icon,
+            size: 20,
+            color: isDestructive ? AppColors.error : AppColors.text,
+          ),
           const SizedBox(width: 12),
           Text(
             label,
@@ -536,7 +573,11 @@ class _AssistantChatCard extends StatelessWidget {
                   color: AppColors.primary.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.smart_toy_rounded, color: AppColors.primary, size: 20),
+                child: const Icon(
+                  Icons.smart_toy_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: 12),
               Text(
@@ -607,12 +648,19 @@ class _AssistantChatCard extends StatelessWidget {
             const SizedBox(
               width: 12,
               height: 12,
-              child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(AppColors.primary)),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation(AppColors.primary),
+              ),
             ),
             const SizedBox(width: 10),
             Text(
               "Yazıyor...",
-              style: TextStyle(color: AppColors.textMuted, fontSize: 13, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -629,12 +677,18 @@ class _AssistantChatCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: message.isUser ? AppColors.primary : Colors.white,
           borderRadius: BorderRadius.circular(20).copyWith(
-            bottomRight: message.isUser ? const Radius.circular(4) : const Radius.circular(20),
-            bottomLeft: message.isUser ? const Radius.circular(20) : const Radius.circular(4),
+            bottomRight: message.isUser
+                ? const Radius.circular(4)
+                : const Radius.circular(20),
+            bottomLeft: message.isUser
+                ? const Radius.circular(20)
+                : const Radius.circular(4),
           ),
           boxShadow: [
             BoxShadow(
-              color: message.isUser ? AppColors.primary.withOpacity(0.2) : Colors.black.withOpacity(0.03),
+              color: message.isUser
+                  ? AppColors.primary.withOpacity(0.2)
+                  : Colors.black.withOpacity(0.03),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -665,17 +719,26 @@ class _AssistantChatCard extends StatelessWidget {
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
             decoration: InputDecoration(
               hintText: AppTexts.of("assistant_chat_hint", lang),
-              hintStyle: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w500),
+              hintStyle: const TextStyle(
+                color: AppColors.textMuted,
+                fontWeight: FontWeight.w500,
+              ),
               filled: true,
               fillColor: AppColors.fieldFill,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 16,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(20),
                 borderSide: BorderSide.none,
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(20),
-                borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                borderSide: const BorderSide(
+                  color: AppColors.primary,
+                  width: 1.5,
+                ),
               ),
             ),
           ),
@@ -941,7 +1004,9 @@ class _NavItem extends StatelessWidget {
         duration: const Duration(milliseconds: 300),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+          color: isSelected
+              ? AppColors.primary.withOpacity(0.1)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
