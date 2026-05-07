@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../core/localization/app_texts.dart';
 import '../../../core/localization/language.dart';
+import '../../../core/theme/app_colors.dart';
 import '../models/fridge_item_model.dart';
 import '../widgets/add_product_options_sheet.dart';
 import '../widgets/empty_fridge_view.dart';
 import '../widgets/fridge_item_card.dart';
-import 'scan_product_page.dart';
 import 'scan_product_page.dart';
 
 class MyFridgePage extends StatefulWidget {
@@ -43,10 +43,8 @@ class _MyFridgePageState extends State<MyFridgePage> {
   void _showAddProductOptions() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFFF8FBFF),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) {
         return AddProductOptionsSheet(
           lang: widget.lang,
@@ -68,6 +66,9 @@ class _MyFridgePageState extends State<MyFridgePage> {
               ScaffoldMessenger.of(this.context).showSnackBar(
                 SnackBar(
                   content: Text(AppTexts.of("product_saved", widget.lang)),
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: AppColors.success,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               );
             }
@@ -76,9 +77,8 @@ class _MyFridgePageState extends State<MyFridgePage> {
             Navigator.pop(context);
             ScaffoldMessenger.of(this.context).showSnackBar(
               SnackBar(
-                content: Text(
-                  AppTexts.of("manual_add_coming_soon", widget.lang),
-                ),
+                content: Text(AppTexts.of("manual_add_coming_soon", widget.lang)),
+                behavior: SnackBarBehavior.floating,
               ),
             );
           },
@@ -96,101 +96,113 @@ class _MyFridgePageState extends State<MyFridgePage> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFEAF4FF), Color(0xFFF8FBFF), Color(0xFFEFFAF6)],
+          colors: [
+            Color(0xFFF8FAFC), // Slate 50
+            Color(0xFFF1F5F9), // Slate 100
+            Color(0xFFEFF6FF), // Blue 50
+          ],
         ),
       ),
       child: SafeArea(
-        top: true,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 120),
+          physics: const BouncingScrollPhysics(),
           children: [
             Text(
               AppTexts.of("my_fridge_title", lang),
               style: const TextStyle(
-                fontSize: 30,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF0F172A),
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
+                color: AppColors.text,
+                letterSpacing: -0.5,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               AppTexts.of("my_fridge_subtitle", lang),
               style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFF64748B),
-                height: 1.4,
+                fontSize: 15,
+                color: AppColors.textMuted,
+                height: 1.5,
+                fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 20),
-            InkWell(
-              onTap: _showAddProductOptions,
-              borderRadius: BorderRadius.circular(26),
-              child: Ink(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(26),
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF1E40AF), // daha koyu mavi
-                      Color(0xFF1D4ED8), // güçlü mavi
-                    ],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF1D4ED8).withOpacity(0.45),
-                      blurRadius: 22,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 54,
-                      height: 54,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1D4ED8), // KOYU ARKA PLAN
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: const Icon(
-                        Icons.add_rounded,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        AppTexts.of("add_product", lang),
-                        style: const TextStyle(
-                          color: const Color(0xFF1D4ED8),
-                          fontSize: 19,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                    const Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 32),
+            _buildAddButton(lang),
+            const SizedBox(height: 32),
             if (_items.isEmpty)
               EmptyFridgeView(lang: lang)
             else
               ..._items.map(
                 (item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 14),
+                  padding: const EdgeInsets.only(bottom: 16),
                   child: FridgeItemCard(item: item, lang: lang),
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddButton(Language lang) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.25),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Material(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          onTap: _showAddProductOptions,
+          borderRadius: BorderRadius.circular(24),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        AppTexts.of("add_product", lang),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        lang == Language.tr ? "Kamera veya elle ekle" : "Add via camera or manually",
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 28),
+              ],
+            ),
+          ),
         ),
       ),
     );

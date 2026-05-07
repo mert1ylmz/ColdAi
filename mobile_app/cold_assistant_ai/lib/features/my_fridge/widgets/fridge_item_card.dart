@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/localization/app_texts.dart';
 import '../../../core/localization/language.dart';
+import '../../../core/theme/app_colors.dart';
 import '../models/fridge_item_model.dart';
 
 class FridgeItemCard extends StatelessWidget {
@@ -19,15 +20,18 @@ class FridgeItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isExpired = item.expiryDate.isBefore(DateTime.now());
+
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.92),
-        borderRadius: BorderRadius.circular(22),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: Colors.white, width: 2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 16,
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 24,
             offset: const Offset(0, 8),
           ),
         ],
@@ -38,91 +42,126 @@ class FridgeItemCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 52,
-                height: 52,
+                width: 56,
+                height: 56,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0EA5E9), Color(0xFF2563EB)],
-                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  gradient: AppColors.primaryGradient,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.2),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
                 ),
-                child: const Icon(
-                  Icons.inventory_2_outlined,
-                  color: Colors.white,
-                ),
+                child: const Icon(Icons.inventory_2_rounded, color: Colors.white, size: 26),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 16),
               Expanded(
-                child: Text(
-                  item.name,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF0F172A),
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.name,
+                      style: const TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.text,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      item.category,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              if (isExpired)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 18),
+                ),
             ],
           ),
-          const SizedBox(height: 16),
-          _InfoRow(title: AppTexts.of("category", lang), value: item.category),
-          _InfoRow(
-            title: AppTexts.of("quantity", lang),
-            value: item.quantity.isEmpty ? "-" : item.quantity,
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              _buildInfoChip(Icons.shopping_basket_outlined, item.quantity.isEmpty ? "-" : item.quantity),
+              const SizedBox(width: 12),
+              _buildInfoChip(Icons.calendar_today_outlined, _formatDate(item.expiryDate), 
+                  isAlert: isExpired),
+            ],
           ),
-          _InfoRow(
-            title: AppTexts.of("note", lang),
-            value: item.note.isEmpty ? "-" : item.note,
-          ),
-          _InfoRow(
-            title: AppTexts.of("added_date", lang),
-            value: _formatDate(item.createdAt),
-          ),
-          _InfoRow(
-            title: AppTexts.of("expiry_date", lang),
-            value: _formatDate(item.expiryDate),
-          ),
+          if (item.note.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.fieldFill.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.sticky_note_2_outlined, size: 18, color: AppColors.textMuted),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      item.note,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textMuted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
-}
 
-class _InfoRow extends StatelessWidget {
-  final String title;
-  final String value;
-
-  const _InfoRow({required this.title, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 135,
-            child: Text(
-              '$title:',
-              style: const TextStyle(
-                color: Color(0xFF64748B),
-                fontSize: 13.5,
-                fontWeight: FontWeight.w600,
+  Widget _buildInfoChip(IconData icon, String label, {bool isAlert = false}) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        decoration: BoxDecoration(
+          color: isAlert ? AppColors.error.withOpacity(0.05) : AppColors.fieldFill.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isAlert ? AppColors.error.withOpacity(0.1) : Colors.transparent,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 16, color: isAlert ? AppColors.error : AppColors.textMuted),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: isAlert ? AppColors.error : AppColors.text,
+                ),
               ),
             ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                color: Color(0xFF0F172A),
-                fontSize: 14.5,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -19,34 +19,51 @@ class AuthHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        // Logo with glow
         Container(
-          width: 112,
-          height: 112,
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(20)),
-          child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Image.asset('assets/images/Logo.png', fit: BoxFit.contain),
+          width: 120,
+          height: 120,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(36),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.15),
+                blurRadius: 30,
+                offset: const Offset(0, 12),
+              ),
+            ],
           ),
+          padding: const EdgeInsets.all(20),
+          child: Image.asset('assets/images/Logo.png', fit: BoxFit.contain),
         ),
 
-        const SizedBox(height: 14),
+        const SizedBox(height: 28),
+        
         Text(
           brand,
           textAlign: TextAlign.center,
           style: const TextStyle(
-            fontSize: 28,
+            fontSize: 34,
             fontWeight: FontWeight.w900,
             color: AppColors.text,
+            letterSpacing: -0.5,
           ),
         ),
-        const SizedBox(height: 6),
-        Text(
-          subtitle,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 14,
-            color: AppColors.muted,
-            height: 1.35,
+        
+        const SizedBox(height: 10),
+        
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 16,
+              color: AppColors.textMuted,
+              height: 1.5,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
       ],
