@@ -44,7 +44,10 @@ class _HomePageState extends State<HomePage> {
     );
 
     if (_geminiApiKey.isNotEmpty) {
-      _model = GenerativeModel(model: 'gemini-2.5-flash', apiKey: _geminiApiKey);
+      _model = GenerativeModel(
+        model: 'gemini-2.5-flash',
+        apiKey: _geminiApiKey,
+      );
       _chatSession = _model!.startChat();
     } else {
       _model = null;
@@ -149,9 +152,9 @@ class _HomePageState extends State<HomePage> {
     }
 
     try {
-      final response = await _chatSession!.sendMessage(Content.text(text));
+      final response = await _chatSession.sendMessage(Content.text(text));
       final replyText = response.text ?? "Yanıt alınamadı.";
-      
+
       if (mounted) {
         setState(() {
           _isTyping = false;

@@ -152,7 +152,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         ),
         const SizedBox(height: 12),
         Text(
-          AppTexts.of("onboarding_subtitle", lang), // Note: Make sure this key exists or use a default
+          AppTexts.of("onboarding_subtitle", lang),
           style: const TextStyle(
             fontSize: 16,
             color: AppColors.textMuted,

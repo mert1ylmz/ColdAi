@@ -298,6 +298,15 @@ class AppTexts {
       Language.tr: "Ürün dolaba eklendi",
       Language.en: "Product added to fridge",
     },
+    "scan_receipt": {Language.tr: "Fiş Tara", Language.en: "Scan Receipt"},
+    "scanning_receipt": {
+      Language.tr: "Fiş analiz ediliyor...",
+      Language.en: "Scanning receipt...",
+    },
+    "add_with_receipt": {
+      Language.tr: "Fiş tara",
+      Language.en: "Scan receipt",
+    },
   };
 
   static String of(String key, Language lang) {

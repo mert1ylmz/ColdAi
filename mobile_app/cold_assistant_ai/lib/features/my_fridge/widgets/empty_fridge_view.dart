@@ -40,6 +40,13 @@ class EmptyFridgeView extends StatelessWidget {
                   AppColors.primary.withOpacity(0.05),
                 ],
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: const Icon(
               Icons.kitchen_rounded,

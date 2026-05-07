@@ -7,12 +7,14 @@ import '../../../core/theme/app_colors.dart';
 class AddProductOptionsSheet extends StatelessWidget {
   final Language lang;
   final VoidCallback onCameraTap;
+  final VoidCallback onReceiptTap;
   final VoidCallback onManualTap;
 
   const AddProductOptionsSheet({
     super.key,
     required this.lang,
     required this.onCameraTap,
+    required this.onReceiptTap,
     required this.onManualTap,
   });
 
@@ -56,7 +58,15 @@ class AddProductOptionsSheet extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             _OptionTile(
-              icon: Icons.edit_rounded,
+              icon: Icons.receipt_long_outlined,
+              title: AppTexts.of("add_with_receipt", lang),
+              subtitle: lang == Language.tr ? "Fiş üzerinden ürünleri ekle" : "Add products via receipt",
+              onTap: onReceiptTap,
+              gradient: const LinearGradient(colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)]),
+            ),
+            const SizedBox(height: 16),
+            _OptionTile(
+              icon: Icons.edit_note_rounded,
               title: AppTexts.of("add_manual", lang),
               subtitle: lang == Language.tr ? "Bilgileri kendin gir" : "Enter details manually",
               onTap: onManualTap,
