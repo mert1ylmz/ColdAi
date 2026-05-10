@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/localization/app_texts.dart';
 import '../../../core/localization/language.dart';
+import '../../../core/theme/app_colors.dart';
 
 class EmptyFridgeView extends StatelessWidget {
   final Language lang;
@@ -12,14 +13,14 @@ class EmptyFridgeView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.88),
-        borderRadius: BorderRadius.circular(24),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 16,
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 24,
             offset: const Offset(0, 8),
           ),
         ],
@@ -27,45 +28,52 @@ class EmptyFridgeView extends StatelessWidget {
       child: Column(
         children: [
           Container(
-            width: 72,
-            height: 72,
+            width: 80,
+            height: 80,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [Color(0xFF60A5FA), Color(0xFF34D399)],
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.primary.withOpacity(0.1),
+                  AppColors.primary.withOpacity(0.05),
+                ],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
             child: const Icon(
-              Icons.kitchen_outlined,
-              color: Colors.white,
-              size: 34,
+              Icons.kitchen_rounded,
+              color: AppColors.primary,
+              size: 40,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 24),
           Text(
             AppTexts.of("empty_fridge_title", lang),
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF0F172A),
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: AppColors.text,
+              letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             AppTexts.of("empty_fridge_subtitle", lang),
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF64748B),
-              height: 1.4,
+              fontSize: 15,
+              color: AppColors.textMuted,
+              height: 1.5,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],

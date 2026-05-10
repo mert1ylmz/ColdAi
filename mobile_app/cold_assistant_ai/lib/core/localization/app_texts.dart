@@ -68,7 +68,11 @@ class AppTexts {
     },
 
     // onboarding
-    "onboarding_title": {Language.tr: "Onboarding", Language.en: "Onboarding"},
+    "onboarding_title": {Language.tr: "Kurulum", Language.en: "Setup"},
+    "onboarding_subtitle": {
+      Language.tr: "Buzdolabınızı tanımamıza yardımcı olun.",
+      Language.en: "Help us get to know your refrigerator.",
+    },
     "fridge_type": {Language.tr: "Buzdolabı tipi", Language.en: "Fridge Type"},
     "fill_all_fields": {
       Language.tr: "Lütfen tüm alanları doldur.",
