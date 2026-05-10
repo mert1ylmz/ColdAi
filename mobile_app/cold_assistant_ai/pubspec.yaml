@@ -34,9 +34,9 @@ dependencies:
   google_generative_ai: ^0.4.7
 
   # AI & OCR (Local)
-  tflite_flutter: ^0.10.4
+  tflite_flutter: ^0.12.1
   image: ^4.2.0
-  google_mlkit_text_recognition: ^0.14.0
+  google_mlkit_text_recognition: ^0.15.1
   
   # Local Storage
   sqflite: ^2.3.3+3
