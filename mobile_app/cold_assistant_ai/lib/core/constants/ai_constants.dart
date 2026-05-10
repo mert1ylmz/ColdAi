@@ -1,7 +1,7 @@
 class AIConstants {
   static const int imgSize = 224;
 
-  static const String mainModelPath = 'assets/models/ana_model.tflite';
+  static const String mainModelPath = 'assets/models/ana_model_yenilenen.tflite';
   static const String fruitModelPath = 'assets/models/meyve_modeli_yeni.tflite';
   static const String vegetableModelPath =
       'assets/models/sebze_modeli_yeni.tflite';

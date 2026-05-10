@@ -66,5 +66,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Bu uygulama, dolabınızdaki veya alışverişinizdeki ürünleri taramak için kameraya ihtiyaç duyar.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Bu uygulama, galerinizdeki ürün fotoğraflarını seçip analiz etmeniz için fotoğraf kütüphanesine ihtiyaç duyar.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Bu uygulama, video kaydı gerektiğinde mikrofona ihtiyaç duyar.</string>
 </dict>
 </plist>

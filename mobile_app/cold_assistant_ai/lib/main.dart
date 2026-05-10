@@ -6,7 +6,7 @@ import 'core/auth_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -14,14 +14,14 @@ void main() async {
   } catch (e) {
     debugPrint('Firebase başlatma hatası: $e');
   }
-  
+
   try {
     // Local AI Model'lerini önceden yükle
     await LocalAIService().loadModels();
   } catch (e) {
     debugPrint('Model yükleme hatası: $e');
   }
-  
+
   runApp(const ColdAssistantApp());
 }
 

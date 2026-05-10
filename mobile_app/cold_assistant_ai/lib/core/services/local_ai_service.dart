@@ -39,8 +39,12 @@ class LocalAIService {
     try {
       // 1. Preprocessing
       final imageBytes = await imageFile.readAsBytes();
-      final decodedImage = img.decodeImage(imageBytes);
+      var decodedImage = img.decodeImage(imageBytes);
       if (decodedImage == null) return {"success": false, "message": "Görüntü çözülemedi"};
+
+      // iOS kameraları fotoğrafları yan kaydeder ve EXIF ile döndürür.
+      // Yapay zeka modelinin yan fotoğraf görmemesi için bu EXIF yönünü kalıcı olarak piksellere işliyoruz.
+      decodedImage = img.bakeOrientation(decodedImage);
 
       final resizedImage = img.copyResize(
         decodedImage,
@@ -56,9 +60,9 @@ class LocalAIService {
       for (var y = 0; y < AIConstants.imgSize; y++) {
         for (var x = 0; x < AIConstants.imgSize; x++) {
           final pixel = resizedImage.getPixel(x, y);
-          input[offset++] = pixel.r / 255.0;
-          input[offset++] = pixel.g / 255.0;
-          input[offset++] = pixel.b / 255.0;
+          input[offset++] = pixel.r.toDouble();
+          input[offset++] = pixel.g.toDouble();
+          input[offset++] = pixel.b.toDouble();
         }
       }
 
@@ -100,8 +104,7 @@ class LocalAIService {
       int productIdx = _getMaxIndex(subProbs);
       double productConf = subProbs[productIdx];
       String productName = AIConstants.productClasses[category]![productIdx];
-      String productTr = AIConstants.enToTr[productName] ?? productName;
-
+      
       if (productConf < AIConstants.subModelThreshold) {
         return {
           "success": true,
@@ -112,6 +115,8 @@ class LocalAIService {
           "message": "Ürün belirlenemedi",
         };
       }
+
+      String productTr = AIConstants.enToTr[productName] ?? productName;
 
       return {
         "success": true,

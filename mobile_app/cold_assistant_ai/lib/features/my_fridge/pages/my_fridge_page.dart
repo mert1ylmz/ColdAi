@@ -9,6 +9,7 @@ import '../widgets/empty_fridge_view.dart';
 import '../widgets/fridge_item_card.dart';
 import 'scan_product_page.dart';
 import 'scan_receipt_page.dart';
+import 'manual_add_product_page.dart';
 import '../../../core/services/database_service.dart';
 
 class MyFridgePage extends StatefulWidget {
@@ -23,6 +24,18 @@ class MyFridgePage extends StatefulWidget {
 class _MyFridgePageState extends State<MyFridgePage> {
   List<FridgeItemModel> _items = [];
   bool _isLoading = true;
+  String _selectedFilter = 'filter_all';
+
+  static const List<String> _filterKeys = [
+    'filter_all',
+    'filter_fruit',
+    'filter_vegetable',
+    'filter_dairy',
+    'filter_meat',
+    'filter_beverage',
+    'filter_packaged',
+    'filter_other',
+  ];
 
   @override
   void initState() {
@@ -36,6 +49,14 @@ class _MyFridgePageState extends State<MyFridgePage> {
       _items = items;
       _isLoading = false;
     });
+  }
+
+  List<FridgeItemModel> get _filteredItems {
+    if (_selectedFilter == 'filter_all') return _items;
+    final filterText = AppTexts.of(_selectedFilter, widget.lang);
+    return _items.where((item) =>
+      item.category.toLowerCase() == filterText.toLowerCase()
+    ).toList();
   }
 
   void _showAddProductOptions() {
@@ -58,7 +79,7 @@ class _MyFridgePageState extends State<MyFridgePage> {
 
             if (result != null && result is FridgeItemModel) {
               await DatabaseService().insertItem(result);
-              _loadItems(); // Listeyi yenile
+              _loadItems();
 
               if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
@@ -82,17 +103,33 @@ class _MyFridgePageState extends State<MyFridgePage> {
             );
 
             if (result == true) {
-              _loadItems(); // Listeyi yenile
+              _loadItems();
             }
           },
-          onManualTap: () {
+          onManualTap: () async {
             Navigator.pop(context);
-            ScaffoldMessenger.of(this.context).showSnackBar(
-              SnackBar(
-                content: Text(AppTexts.of("manual_add_coming_soon", widget.lang)),
-                behavior: SnackBarBehavior.floating,
+
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ManualAddProductPage(lang: widget.lang),
               ),
             );
+
+            if (result != null && result is FridgeItemModel) {
+              await DatabaseService().insertItem(result);
+              _loadItems();
+
+              if (!mounted) return;
+              ScaffoldMessenger.of(this.context).showSnackBar(
+                SnackBar(
+                  content: Text(AppTexts.of("product_saved", widget.lang)),
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: AppColors.success,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              );
+            }
           },
         );
       },
@@ -139,15 +176,22 @@ class _MyFridgePageState extends State<MyFridgePage> {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
             _buildAddButton(lang),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
+
+            // Category Filter Chips
+            _buildFilterChips(lang),
+            const SizedBox(height: 24),
+
             if (_isLoading)
               const Center(child: CircularProgressIndicator())
             else if (_items.isEmpty)
               EmptyFridgeView(lang: lang)
+            else if (_filteredItems.isEmpty)
+              _buildFilterEmptyState(lang)
             else
-              ..._items.map(
+              ..._filteredItems.map(
                 (item) => Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: FridgeItemCard(item: item, lang: lang),
@@ -155,6 +199,117 @@ class _MyFridgePageState extends State<MyFridgePage> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChips(Language lang) {
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _filterKeys.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final key = _filterKeys[index];
+          final isSelected = _selectedFilter == key;
+
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                _selectedFilter = key;
+              });
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primary : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.primary
+                      : AppColors.border,
+                  width: 1.5,
+                ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: AppColors.primary.withOpacity(0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : [],
+              ),
+              child: Center(
+                child: Text(
+                  AppTexts.of(key, lang),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: isSelected ? Colors.white : AppColors.text,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFilterEmptyState(Language lang) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primary.withOpacity(0.08),
+            ),
+            child: const Icon(
+              Icons.filter_list_off_rounded,
+              color: AppColors.primary,
+              size: 32,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            AppTexts.of("filter_empty", lang),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.text,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            AppTexts.of("filter_empty_subtitle", lang),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppColors.textMuted,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -203,7 +358,7 @@ class _MyFridgePageState extends State<MyFridgePage> {
                         ),
                       ),
                       Text(
-                        lang == Language.tr ? "Kamera veya elle ekle" : "Add via camera or manually",
+                        AppTexts.of("add_via_camera_or_manual", lang),
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.7),
                           fontSize: 13,

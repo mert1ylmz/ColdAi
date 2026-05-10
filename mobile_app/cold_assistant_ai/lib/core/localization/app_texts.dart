@@ -145,6 +145,14 @@ class AppTexts {
       Language.en:
           "This area will be connected to the real API later. For now, the chat card is ready.",
     },
+    "assistant_typing": {
+      Language.tr: "Yazıyor...",
+      Language.en: "Typing...",
+    },
+    "assistant_api_missing": {
+      Language.tr: "API anahtarı eksik. Lütfen koda ekleyin.",
+      Language.en: "API key is missing. Please add it to the code.",
+    },
 
     // info cards
     "smart_suggestion": {
@@ -163,7 +171,7 @@ class AppTexts {
 
     // bottom nav
     "nav_home": {Language.tr: "Home", Language.en: "Home"},
-    "nav_search": {Language.tr: "Ara", Language.en: "Search"},
+    "nav_pending": {Language.tr: "Askıda", Language.en: "Pending"},
     "nav_recipes": {Language.tr: "Tarifler", Language.en: "Recipes"},
     "nav_my_fridge": {Language.tr: "Dolabım", Language.en: "My Fridge"},
 
@@ -186,7 +194,7 @@ class AppTexts {
     },
     "slogan_5": {
       Language.tr:
-          "Dünya genelinde üretilen gıdanın yaklaşık %30’u israf ediliyor.",
+          "Dünya genelinde üretilen gıdanın yaklaşık %30'u israf ediliyor.",
       Language.en: "Approximately 30% of food produced worldwide is wasted.",
     },
     "slogan_6": {
@@ -306,6 +314,320 @@ class AppTexts {
     "add_with_receipt": {
       Language.tr: "Fiş tara",
       Language.en: "Scan receipt",
+    },
+
+    // ========== NEW STRINGS ==========
+
+    // Expiry reminders
+    "reminder_expiry_approaching": {
+      Language.tr: "{name} son kullanma tarihi yaklaşıyor",
+      Language.en: "{name} expiry date is approaching",
+    },
+    "reminder_consume_today": {
+      Language.tr: "{name} bugün tüketmen iyi olabilir",
+      Language.en: "You should consume {name} today",
+    },
+    "reminder_expired": {
+      Language.tr: "{name} son kullanma tarihi geçmiş!",
+      Language.en: "{name} has expired!",
+    },
+    "reminder_no_expiry": {
+      Language.tr: "Harika! Yakında son kullanma tarihi dolan ürün yok 🎉",
+      Language.en: "Great! No products expiring soon 🎉",
+    },
+    "reminder_days_left": {
+      Language.tr: "{days} gün kaldı",
+      Language.en: "{days} days left",
+    },
+    "reminder_today": {
+      Language.tr: "Bugün!",
+      Language.en: "Today!",
+    },
+
+    // Smart Suggestion Page
+    "smart_suggestion_page_title": {
+      Language.tr: "Akıllı Öneri",
+      Language.en: "Smart Suggestion",
+    },
+    "smart_suggestion_page_subtitle": {
+      Language.tr: "AI destekli öneriler ve tarifler",
+      Language.en: "AI-powered suggestions and recipes",
+    },
+    "smart_suggestion_assistant_title": {
+      Language.tr: "Akıllı Asistan",
+      Language.en: "Smart Assistant",
+    },
+    "smart_suggestion_assistant_subtitle": {
+      Language.tr: "Dolabındaki ürünlere göre öneriler al",
+      Language.en: "Get suggestions based on your fridge items",
+    },
+    "smart_suggestion_assistant_hint": {
+      Language.tr: "Örn: Dolabımdaki malzemelerle ne yapabilirim?",
+      Language.en: "E.g. What can I make with ingredients in my fridge?",
+    },
+    "smart_suggestion_recipes_title": {
+      Language.tr: "Tarifleri Keşfet",
+      Language.en: "Explore Recipes",
+    },
+    "smart_suggestion_recipes_subtitle": {
+      Language.tr: "Birbirinden lezzetli tariflere göz at",
+      Language.en: "Browse delicious recipes",
+    },
+
+    // Recipes Page
+    "recipes_title": {
+      Language.tr: "Tarifler",
+      Language.en: "Recipes",
+    },
+    "recipes_subtitle": {
+      Language.tr: "Birbirinden lezzetli tarifleri keşfet",
+      Language.en: "Discover delicious recipes",
+    },
+    "recipe_prep_time": {
+      Language.tr: "Süre",
+      Language.en: "Time",
+    },
+    "recipe_difficulty": {
+      Language.tr: "Zorluk",
+      Language.en: "Difficulty",
+    },
+    "recipe_ingredients": {
+      Language.tr: "Malzemeler",
+      Language.en: "Ingredients",
+    },
+    "recipe_easy": {
+      Language.tr: "Kolay",
+      Language.en: "Easy",
+    },
+    "recipe_medium": {
+      Language.tr: "Orta",
+      Language.en: "Medium",
+    },
+    "recipe_hard": {
+      Language.tr: "Zor",
+      Language.en: "Hard",
+    },
+    "recipe_minutes": {
+      Language.tr: "dk",
+      Language.en: "min",
+    },
+
+    // Default Recipe Names
+    "recipe_1_name": {
+      Language.tr: "Menemen",
+      Language.en: "Turkish Menemen",
+    },
+    "recipe_1_desc": {
+      Language.tr: "Domates, biber ve yumurta ile hazırlanan klasik Türk kahvaltısı",
+      Language.en: "Classic Turkish breakfast with tomatoes, peppers and eggs",
+    },
+    "recipe_2_name": {
+      Language.tr: "Mercimek Çorbası",
+      Language.en: "Lentil Soup",
+    },
+    "recipe_2_desc": {
+      Language.tr: "Geleneksel kırmızı mercimek çorbası",
+      Language.en: "Traditional red lentil soup",
+    },
+    "recipe_3_name": {
+      Language.tr: "Makarna Bolonez",
+      Language.en: "Pasta Bolognese",
+    },
+    "recipe_3_desc": {
+      Language.tr: "İtalyan usulü kıymalı makarna sosu",
+      Language.en: "Italian-style meat pasta sauce",
+    },
+    "recipe_4_name": {
+      Language.tr: "Tavuk Sote",
+      Language.en: "Chicken Sauté",
+    },
+    "recipe_4_desc": {
+      Language.tr: "Sebzeli tavuk sote, ana yemek",
+      Language.en: "Chicken sauté with vegetables, main course",
+    },
+    "recipe_5_name": {
+      Language.tr: "Çoban Salatası",
+      Language.en: "Shepherd's Salad",
+    },
+    "recipe_5_desc": {
+      Language.tr: "Taze sebzelerle hazırlanan hafif salata",
+      Language.en: "Light salad prepared with fresh vegetables",
+    },
+    "recipe_6_name": {
+      Language.tr: "Patates Kızartması",
+      Language.en: "French Fries",
+    },
+    "recipe_6_desc": {
+      Language.tr: "Çıtır çıtır patates kızartması",
+      Language.en: "Crispy french fries",
+    },
+    "recipe_7_name": {
+      Language.tr: "Omlet",
+      Language.en: "Omelette",
+    },
+    "recipe_7_desc": {
+      Language.tr: "Peynirli ve sebzeli omlet",
+      Language.en: "Omelette with cheese and vegetables",
+    },
+    "recipe_8_name": {
+      Language.tr: "Pilav",
+      Language.en: "Rice Pilaf",
+    },
+    "recipe_8_desc": {
+      Language.tr: "Tereyağlı pirinç pilavı",
+      Language.en: "Buttered rice pilaf",
+    },
+    "recipe_9_name": {
+      Language.tr: "Karnıyarık",
+      Language.en: "Stuffed Eggplant",
+    },
+    "recipe_9_desc": {
+      Language.tr: "Kıymalı patlıcan yemeği",
+      Language.en: "Eggplant stuffed with minced meat",
+    },
+    "recipe_10_name": {
+      Language.tr: "Smoothie Bowl",
+      Language.en: "Smoothie Bowl",
+    },
+    "recipe_10_desc": {
+      Language.tr: "Meyveli sağlıklı smoothie kase",
+      Language.en: "Healthy fruit smoothie bowl",
+    },
+
+    // Pending (Askıda) Page
+    "pending_title": {
+      Language.tr: "Askıda",
+      Language.en: "Pending",
+    },
+    "pending_subtitle": {
+      Language.tr: "İhtiyaç sahiplerine fazla ürünlerini ulaştır",
+      Language.en: "Deliver your surplus products to those in need",
+    },
+    "pending_info_title": {
+      Language.tr: "Askıda Ürün Nedir?",
+      Language.en: "What is Pending Product?",
+    },
+    "pending_info_desc": {
+      Language.tr: "Fazla veya kullanmayacağın ürünleri askıya bırakarak ihtiyaç sahiplerine ulaştırabilirsin. Haritadan yakınındaki noktaları görebilirsin.",
+      Language.en: "You can deliver your surplus or unused products to those in need by leaving them pending. You can see nearby points on the map.",
+    },
+    "pending_map_title": {
+      Language.tr: "Yakındaki Noktalar",
+      Language.en: "Nearby Points",
+    },
+    "pending_map_placeholder": {
+      Language.tr: "Harita yakında aktif olacak",
+      Language.en: "Map will be active soon",
+    },
+    "pending_leave_product": {
+      Language.tr: "Ürün Askıya Bırak",
+      Language.en: "Leave Product Pending",
+    },
+    "pending_my_items": {
+      Language.tr: "Askıdaki Ürünlerim",
+      Language.en: "My Pending Items",
+    },
+    "pending_browse": {
+      Language.tr: "Askıdaki Ürünlere Göz At",
+      Language.en: "Browse Pending Items",
+    },
+    "pending_coming_soon": {
+      Language.tr: "Bu özellik yakında aktif olacak!",
+      Language.en: "This feature will be active soon!",
+    },
+    "pending_tap_map": {
+      Language.tr: "Haritaya dokunarak büyüt",
+      Language.en: "Tap the map to expand",
+    },
+
+    // Manual Add Page
+    "manual_add_title": {
+      Language.tr: "Manuel Ürün Ekle",
+      Language.en: "Add Product Manually",
+    },
+    "manual_add_subtitle": {
+      Language.tr: "Ürün bilgilerini girerek dolabına ekle",
+      Language.en: "Add to your fridge by entering product details",
+    },
+    "manual_product_details": {
+      Language.tr: "Ürün Bilgileri",
+      Language.en: "Product Details",
+    },
+    "manual_select_category": {
+      Language.tr: "Kategori seç",
+      Language.en: "Select category",
+    },
+    "manual_quantity_hint": {
+      Language.tr: "Örn: 1 kg, 2 adet",
+      Language.en: "E.g. 1 kg, 2 pcs",
+    },
+    "manual_note_hint": {
+      Language.tr: "Ürün hakkında not ekle...",
+      Language.en: "Add a note about the product...",
+    },
+    "manual_product_name_hint": {
+      Language.tr: "Ürün adını girin",
+      Language.en: "Enter product name",
+    },
+
+    // Category Filters
+    "filter_all": {
+      Language.tr: "Tümü",
+      Language.en: "All",
+    },
+    "filter_fruit": {
+      Language.tr: "Meyve",
+      Language.en: "Fruit",
+    },
+    "filter_vegetable": {
+      Language.tr: "Sebze",
+      Language.en: "Vegetable",
+    },
+    "filter_dairy": {
+      Language.tr: "Süt Ürünleri",
+      Language.en: "Dairy",
+    },
+    "filter_meat": {
+      Language.tr: "Et/Tavuk/Balık",
+      Language.en: "Meat/Poultry/Fish",
+    },
+    "filter_beverage": {
+      Language.tr: "İçecek",
+      Language.en: "Beverage",
+    },
+    "filter_packaged": {
+      Language.tr: "Paketli",
+      Language.en: "Packaged",
+    },
+    "filter_other": {
+      Language.tr: "Diğer",
+      Language.en: "Other",
+    },
+    "filter_empty": {
+      Language.tr: "Bu kategoride ürün bulunamadı",
+      Language.en: "No products found in this category",
+    },
+    "filter_empty_subtitle": {
+      Language.tr: "Bu sınıfta henüz ürün eklenmemiş",
+      Language.en: "No products have been added to this category yet",
+    },
+
+    // Add via camera/manual
+    "add_via_camera_or_manual": {
+      Language.tr: "Kamera veya elle ekle",
+      Language.en: "Add via camera or manually",
+    },
+    "scan_with_ai": {
+      Language.tr: "Yapay zeka ile tara",
+      Language.en: "Scan with AI",
+    },
+    "add_products_via_receipt": {
+      Language.tr: "Fiş üzerinden ürünleri ekle",
+      Language.en: "Add products via receipt",
+    },
+    "enter_details_manually": {
+      Language.tr: "Bilgileri kendin gir",
+      Language.en: "Enter details manually",
     },
   };
 

@@ -5,12 +5,16 @@ import 'package:auto_size_text/auto_size_text.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:google_generative_ai/google_generative_ai.dart' hide Language;
 
 import 'package:cold_assistant_ai/core/localization/app_texts.dart';
 import 'package:cold_assistant_ai/core/localization/language.dart';
 import 'package:cold_assistant_ai/core/theme/app_colors.dart';
 import '../../my_fridge/pages/my_fridge_page.dart';
+import '../../recipes/pages/recipes_page.dart';
+import '../../pending/pages/pending_page.dart';
+import '../widgets/assistant_chat_widget.dart';
+import '../widgets/expiry_reminder_card.dart';
+import 'smart_suggestion_page.dart';
 
 class HomePage extends StatefulWidget {
   final Language lang;
@@ -23,38 +27,11 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int selectedIndex = 0;
-  final TextEditingController _messageController = TextEditingController();
-  final List<_ChatMessage> _messages = [];
-  bool _isTyping = false;
-
-  // TODO: Paste your API key here or provide it in the chat
-  static const String _geminiApiKey = '[YOUR API KEY]';
-  late final GenerativeModel? _model;
-  late final ChatSession? _chatSession;
   late final Stream<DocumentSnapshot<Map<String, dynamic>>> _userStream;
-  final ScrollController _chatScrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _messages.add(
-      _ChatMessage(
-        text: AppTexts.of("assistant_first_message", widget.lang),
-        isUser: false,
-      ),
-    );
-
-    if (_geminiApiKey.isNotEmpty) {
-      _model = GenerativeModel(
-        model: 'gemini-2.5-flash',
-        apiKey: _geminiApiKey,
-      );
-      _chatSession = _model!.startChat();
-    } else {
-      _model = null;
-      _chatSession = null;
-    }
-
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       _userStream = FirebaseFirestore.instance
@@ -66,13 +43,6 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _signOut() async {
     await FirebaseAuth.instance.signOut();
-  }
-
-  @override
-  void dispose() {
-    _messageController.dispose();
-    _chatScrollController.dispose();
-    super.dispose();
   }
 
   void _onMenuSelected(String value) {
@@ -109,76 +79,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_chatScrollController.hasClients) {
-        _chatScrollController.animateTo(
-          _chatScrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
-  Future<void> _sendMessage() async {
-    final lang = widget.lang;
-    final text = _messageController.text.trim();
-
-    if (text.isEmpty) return;
-
-    setState(() {
-      _messages.add(_ChatMessage(text: text, isUser: true));
-      _isTyping = true;
-    });
-
-    _messageController.clear();
-    _scrollToBottom();
-
-    if (_chatSession == null) {
-      await Future.delayed(const Duration(seconds: 1));
-      if (mounted) {
-        setState(() {
-          _isTyping = false;
-          _messages.add(
-            const _ChatMessage(
-              text: "API anahtarı eksik. Lütfen koda ekleyin.",
-              isUser: false,
-            ),
-          );
-        });
-        _scrollToBottom();
-      }
-      return;
-    }
-
-    try {
-      final response = await _chatSession.sendMessage(Content.text(text));
-      final replyText = response.text ?? "Yanıt alınamadı.";
-
-      if (mounted) {
-        setState(() {
-          _isTyping = false;
-          _messages.add(_ChatMessage(text: replyText, isUser: false));
-        });
-        _scrollToBottom();
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isTyping = false;
-          _messages.add(
-            _ChatMessage(
-              text: "${AppTexts.of("error_prefix", lang)}: $e",
-              isUser: false,
-            ),
-          );
-        });
-        _scrollToBottom();
-      }
-    }
-  }
-
   Widget _buildBody(
     Language lang, {
     required String displayName,
@@ -188,19 +88,9 @@ class _HomePageState extends State<HomePage> {
       case 0:
         return _buildHomeContent(lang, displayName: displayName, brand: brand);
       case 1:
-        return Center(
-          child: Text(
-            AppTexts.of("nav_search", lang),
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-          ),
-        );
+        return PendingPage(lang: lang);
       case 2:
-        return Center(
-          child: Text(
-            AppTexts.of("nav_recipes", lang),
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-          ),
-        );
+        return RecipesPage(lang: lang);
       case 3:
         return MyFridgePage(lang: lang);
       default:
@@ -285,37 +175,38 @@ class _HomePageState extends State<HomePage> {
 
             const SizedBox(height: 24),
 
-            _AssistantChatCard(
-              lang: lang,
-              controller: _messageController,
-              messages: _messages,
-              onSend: _sendMessage,
-              isTyping: _isTyping,
-              scrollController: _chatScrollController,
-            ),
+            // Expiry Reminder Card (enlarged, right after welcome)
+            ExpiryReminderCard(lang: lang),
 
             const SizedBox(height: 24),
 
-            Row(
-              children: [
-                Expanded(
-                  child: _InfoCard(
-                    icon: Icons.auto_awesome_rounded,
-                    title: AppTexts.of("smart_suggestion", lang),
-                    subtitle: AppTexts.of("smart_suggestion_subtitle", lang),
-                    color: AppColors.primary,
+            // Assistant Chat Widget (separate StatefulWidget – no full rebuild)
+            AssistantChatWidget(lang: lang),
+
+            const SizedBox(height: 24),
+
+            // Smart Suggestion Card (tappable)
+            GestureDetector(
+              onTap: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SmartSuggestionPage(lang: lang),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _InfoCard(
-                    icon: Icons.notifications_active_rounded,
-                    title: AppTexts.of("reminders", lang),
-                    subtitle: AppTexts.of("reminders_subtitle", lang),
-                    color: AppColors.secondary,
-                  ),
-                ),
-              ],
+                );
+                if (result == 'go_recipes') {
+                  setState(() {
+                    selectedIndex = 2;
+                  });
+                }
+              },
+              child: _InfoCard(
+                icon: Icons.auto_awesome_rounded,
+                title: AppTexts.of("smart_suggestion", lang),
+                subtitle: AppTexts.of("smart_suggestion_subtitle", lang),
+                color: AppColors.primary,
+                isFullWidth: true,
+              ),
             ),
           ],
         ),
@@ -505,8 +396,8 @@ class _HomePageState extends State<HomePage> {
               onTap: () => setState(() => selectedIndex = 0),
             ),
             _NavItem(
-              icon: Icons.search_rounded,
-              label: AppTexts.of("nav_search", lang),
+              icon: Icons.volunteer_activism_rounded,
+              label: AppTexts.of("nav_pending", lang),
               isSelected: selectedIndex == 1,
               onTap: () => setState(() => selectedIndex = 1),
             ),
@@ -527,254 +418,6 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-}
-
-class _AssistantChatCard extends StatelessWidget {
-  final Language lang;
-  final TextEditingController controller;
-  final List<_ChatMessage> messages;
-  final VoidCallback onSend;
-  final bool isTyping;
-  final ScrollController scrollController;
-
-  const _AssistantChatCard({
-    required this.lang,
-    required this.controller,
-    required this.messages,
-    required this.onSend,
-    required this.isTyping,
-    required this.scrollController,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.white, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.08),
-            blurRadius: 40,
-            offset: const Offset(0, 16),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.smart_toy_rounded,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                AppTexts.of("assistant_chat_title", lang),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.text,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            AppTexts.of("assistant_chat_subtitle", lang),
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppColors.textMuted,
-              height: 1.5,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Container(
-            constraints: const BoxConstraints(minHeight: 160, maxHeight: 300),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.fieldFill.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.border.withOpacity(0.5)),
-            ),
-            child: ListView.separated(
-              controller: scrollController,
-              shrinkWrap: true,
-              itemCount: messages.length + (isTyping ? 1 : 0),
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
-              physics: const ClampingScrollPhysics(),
-              itemBuilder: (context, index) {
-                if (isTyping && index == messages.length) {
-                  return _buildTypingIndicator();
-                }
-
-                final message = messages[index];
-                return _buildMessageBubble(message);
-              },
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildChatInput(lang),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTypingIndicator() {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(
-              width: 12,
-              height: 12,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation(AppColors.primary),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              "Yazıyor...",
-              style: TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMessageBubble(_ChatMessage message) {
-    return Align(
-      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 280),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: message.isUser ? AppColors.primary : Colors.white,
-          borderRadius: BorderRadius.circular(20).copyWith(
-            bottomRight: message.isUser
-                ? const Radius.circular(4)
-                : const Radius.circular(20),
-            bottomLeft: message.isUser
-                ? const Radius.circular(20)
-                : const Radius.circular(4),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: message.isUser
-                  ? AppColors.primary.withOpacity(0.2)
-                  : Colors.black.withOpacity(0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-          border: message.isUser ? null : Border.all(color: AppColors.border),
-        ),
-        child: Text(
-          message.text,
-          style: TextStyle(
-            color: message.isUser ? Colors.white : AppColors.text,
-            fontSize: 14,
-            height: 1.45,
-            fontWeight: message.isUser ? FontWeight.w600 : FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildChatInput(Language lang) {
-    return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: controller,
-            minLines: 1,
-            maxLines: 4,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-            decoration: InputDecoration(
-              hintText: AppTexts.of("assistant_chat_hint", lang),
-              hintStyle: const TextStyle(
-                color: AppColors.textMuted,
-                fontWeight: FontWeight.w500,
-              ),
-              filled: true,
-              fillColor: AppColors.fieldFill,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 16,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(20),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(20),
-                borderSide: const BorderSide(
-                  color: AppColors.primary,
-                  width: 1.5,
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
-                blurRadius: 15,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: IconButton.filled(
-            onPressed: onSend,
-            icon: const Icon(Icons.send_rounded, size: 22),
-            style: IconButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.all(16),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ChatMessage {
-  final String text;
-  final bool isUser;
-
-  const _ChatMessage({required this.text, required this.isUser});
 }
 
 class _AnimatedHeroCard extends StatefulWidget {
@@ -918,18 +561,20 @@ class _InfoCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final Color color;
+  final bool isFullWidth;
 
   const _InfoCard({
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.color,
+    this.isFullWidth = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 160,
+      height: isFullWidth ? null : 160,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -943,41 +588,86 @@ class _InfoCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(14),
+      child: isFullWidth
+          ? Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(icon, color: color, size: 26),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 17,
+                          color: AppColors.text,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 13,
+                          height: 1.4,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: AppColors.border,
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(icon, color: color, size: 24),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                    color: AppColors.text,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Expanded(
+                  child: Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 12.5,
+                      height: 1.4,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.w900,
-              fontSize: 16,
-              color: AppColors.text,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Expanded(
-            child: Text(
-              subtitle,
-              style: const TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 12.5,
-                height: 1.4,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
