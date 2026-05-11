@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'core/services/local_ai_service.dart';
 import 'core/auth_gate.dart';
 
 void main() async {
@@ -13,13 +12,6 @@ void main() async {
     );
   } catch (e) {
     debugPrint('Firebase başlatma hatası: $e');
-  }
-
-  try {
-    // Local AI Model'lerini önceden yükle
-    await LocalAIService().loadModels();
-  } catch (e) {
-    debugPrint('Model yükleme hatası: $e');
   }
 
   runApp(const ColdAssistantApp());

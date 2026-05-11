@@ -58,6 +58,10 @@ class _ScanProductPageState extends State<ScanProductPage> {
     final detectedProduct = mapDetectionToProduct(
       label: _result!['label'],
       lang: widget.lang,
+      category: _result!['category'],
+      expiryDays: _result!['expiry_days'] is int
+          ? _result!['expiry_days']
+          : int.tryParse(_result!['expiry_days']?.toString() ?? '7') ?? 7,
     );
 
     final fridgeItem = await Navigator.push(

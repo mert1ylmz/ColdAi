@@ -4,6 +4,7 @@ import 'package:google_generative_ai/google_generative_ai.dart' hide Language;
 import '../../../core/localization/app_texts.dart';
 import '../../../core/localization/language.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/constants/ai_constants.dart';
 
 class SmartSuggestionPage extends StatefulWidget {
   final Language lang;
@@ -20,7 +21,6 @@ class _SmartSuggestionPageState extends State<SmartSuggestionPage> {
   final List<_ChatMsg> _messages = [];
   bool _isTyping = false;
 
-  static const String _geminiApiKey = 'AIzaSyAmGL3ZUWydAzxgNEPcmF-1OHktBMMh3i0';
   late final GenerativeModel? _model;
   late final ChatSession? _chatSession;
 
@@ -34,10 +34,10 @@ class _SmartSuggestionPageState extends State<SmartSuggestionPage> {
       isUser: false,
     ));
 
-    if (_geminiApiKey.isNotEmpty) {
+    if (AIConstants.geminiApiKey.isNotEmpty) {
       _model = GenerativeModel(
-        model: 'gemini-2.5-flash',
-        apiKey: _geminiApiKey,
+        model: AIConstants.geminiModel,
+        apiKey: AIConstants.geminiApiKey,
       );
       _chatSession = _model!.startChat();
     } else {

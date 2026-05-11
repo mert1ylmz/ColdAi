@@ -4,7 +4,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/localization/app_texts.dart';
 import '../../../core/localization/language.dart';
-import '../../../core/services/local_ocr_service.dart';
+import '../../../core/services/receipt_recognition_service.dart';
 import '../models/fridge_item_model.dart';
 import '../services/detected_product_mapper.dart';
 import 'detected_product_edit_page.dart';
@@ -25,7 +25,7 @@ class _ScanReceiptPageState extends State<ScanReceiptPage> {
   String? _errorMessage;
 
   final ImagePicker picker = ImagePicker();
-  final _ocrService = LocalOCRService();
+  final _ocrService = ReceiptRecognitionService();
 
   Future<void> pickImage(ImageSource source) async {
     final picked = await picker.pickImage(source: source);
@@ -67,6 +67,10 @@ class _ScanReceiptPageState extends State<ScanReceiptPage> {
       final detectedProduct = mapDetectionToProduct(
         label: res['product_tr'] ?? res['product'],
         lang: widget.lang,
+        category: res['category'],
+        expiryDays: res['expiry_days'] is int
+            ? res['expiry_days']
+            : int.tryParse(res['expiry_days']?.toString() ?? '7') ?? 7,
       );
 
       final result = await Navigator.push(

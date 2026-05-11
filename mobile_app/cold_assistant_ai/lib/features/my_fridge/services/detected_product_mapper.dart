@@ -1,29 +1,20 @@
 import '../../../core/localization/language.dart';
-import '../data/product_catalog.dart';
 import '../models/detected_product_model.dart';
-import '../models/product_template_model.dart';
 
+/// Maps a Gemini detection result directly to a DetectedProductModel.
+/// No longer relies on a hardcoded product catalog — Gemini provides all info.
 DetectedProductModel mapDetectionToProduct({
   required String label,
   required Language lang,
+  String? category,
+  int? expiryDays,
 }) {
-  final template = productCatalog.firstWhere(
-    (e) => e.label == label,
-    orElse: () => ProductTemplateModel(
-      label: label,
-      nameTr: label,
-      nameEn: label,
-      category: "Other",
-      expiryDays: 3,
-    ),
-  );
-
   final now = DateTime.now();
 
   return DetectedProductModel(
-    name: lang == Language.tr ? template.nameTr : template.nameEn,
-    category: template.category,
+    name: label,
+    category: category ?? 'Diğer',
     createdAt: now,
-    expiryDate: now.add(Duration(days: template.expiryDays)),
+    expiryDate: now.add(Duration(days: expiryDays ?? 7)),
   );
 }
