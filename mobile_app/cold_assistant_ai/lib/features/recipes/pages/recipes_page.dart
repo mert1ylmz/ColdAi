@@ -3,33 +3,64 @@ import 'package:flutter/material.dart';
 import '../../../core/localization/app_texts.dart';
 import '../../../core/localization/language.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/services/database_service.dart';
+import '../models/recipe_model.dart';
 
-class RecipeModel {
-  final String nameKey;
-  final String descKey;
-  final List<String> ingredients;
-  final int prepMinutes;
-  final String difficultyKey; // recipe_easy, recipe_medium, recipe_hard
-  final IconData icon;
-  final List<Color> gradientColors;
-
-  const RecipeModel({
-    required this.nameKey,
-    required this.descKey,
-    required this.ingredients,
-    required this.prepMinutes,
-    required this.difficultyKey,
-    required this.icon,
-    required this.gradientColors,
-  });
-}
-
-class RecipesPage extends StatelessWidget {
+class RecipesPage extends StatefulWidget {
   final Language lang;
 
   const RecipesPage({super.key, required this.lang});
 
-  static final List<RecipeModel> _recipes = [
+  @override
+  State<RecipesPage> createState() => _RecipesPageState();
+}
+
+class _RecipesPageState extends State<RecipesPage> {
+  List<RecipeModel> _customRecipes = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCustomRecipes();
+  }
+
+  Future<void> _loadCustomRecipes() async {
+    try {
+      final recipes = await DatabaseService().getRecipes();
+      if (mounted) {
+        setState(() {
+          _customRecipes = recipes;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _deleteRecipe(String id) async {
+    await DatabaseService().deleteRecipe(id);
+    _loadCustomRecipes();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppTexts.of("recipe_deleted", widget.lang)),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.error,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    }
+  }
+
+  static final List<RecipeModel> _staticRecipes = [
     RecipeModel(
       nameKey: "recipe_1_name",
       descKey: "recipe_1_desc",
@@ -124,6 +155,9 @@ class RecipesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final lang = widget.lang;
+    final allRecipes = [..._customRecipes, ..._staticRecipes];
+
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -137,38 +171,46 @@ class RecipesPage extends StatelessWidget {
         ),
       ),
       child: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 120),
-          physics: const BouncingScrollPhysics(),
-          children: [
-            Text(
-              AppTexts.of("recipes_title", lang),
-              style: const TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w900,
-                color: AppColors.text,
-                letterSpacing: -0.5,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 120),
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  Text(
+                    AppTexts.of("recipes_title", lang),
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.text,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    AppTexts.of("recipes_subtitle", lang),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: AppColors.textMuted,
+                      height: 1.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  ...allRecipes.map(
+                    (recipe) => Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _RecipeCard(
+                        recipe: recipe,
+                        lang: lang,
+                        onDelete: recipe.id != null
+                            ? () => _deleteRecipe(recipe.id!)
+                            : null,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              AppTexts.of("recipes_subtitle", lang),
-              style: const TextStyle(
-                fontSize: 15,
-                color: AppColors.textMuted,
-                height: 1.5,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 28),
-            ..._recipes.map(
-              (recipe) => Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: _RecipeCard(recipe: recipe, lang: lang),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -177,8 +219,13 @@ class RecipesPage extends StatelessWidget {
 class _RecipeCard extends StatefulWidget {
   final RecipeModel recipe;
   final Language lang;
+  final VoidCallback? onDelete;
 
-  const _RecipeCard({required this.recipe, required this.lang});
+  const _RecipeCard({
+    required this.recipe,
+    required this.lang,
+    this.onDelete,
+  });
 
   @override
   State<_RecipeCard> createState() => _RecipeCardState();
@@ -271,6 +318,19 @@ class _RecipeCardState extends State<_RecipeCard> {
                     ],
                   ),
                 ),
+                if (widget.onDelete != null) ...[
+                  IconButton(
+                    onPressed: widget.onDelete,
+                    icon: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: AppColors.error,
+                      size: 22,
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 4),
+                ],
                 AnimatedRotation(
                   turns: _expanded ? 0.5 : 0,
                   duration: const Duration(milliseconds: 300),
@@ -363,7 +423,151 @@ class _RecipeCardState extends State<_RecipeCard> {
                     ))
                 .toList(),
           ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _showInstructionsModal(context, recipe, lang),
+              icon: const Icon(Icons.menu_book_rounded),
+              label: Text(
+                lang == Language.tr ? "Hazırlanışı Göster" : "Show Instructions",
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: recipe.gradientColors.first,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  void _showInstructionsModal(
+    BuildContext context,
+    RecipeModel recipe,
+    Language lang,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      backgroundColor: Colors.white,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          left: 20,
+          right: 20,
+          top: 24,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: LinearGradient(
+                    colors: recipe.gradientColors,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: recipe.gradientColors.first.withOpacity(0.3),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(recipe.icon, color: Colors.white, size: 28),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                AppTexts.of(recipe.nameKey, lang),
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.text,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 28),
+              Text(
+                lang == Language.tr ? "HAZIRLANIŞI" : "INSTRUCTIONS",
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textMuted,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.fieldFill,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.border.withOpacity(0.5),
+                  ),
+                ),
+                child: Text(
+                  recipe.descKey.isNotEmpty
+                      ? AppTexts.of(recipe.descKey, lang)
+                      : "Hazırlanış bilgisi yok",
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: AppColors.text,
+                    height: 1.8,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    AppTexts.of("cancel", lang),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
       ),
     );
   }

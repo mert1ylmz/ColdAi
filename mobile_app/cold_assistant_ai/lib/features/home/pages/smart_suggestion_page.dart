@@ -5,6 +5,8 @@ import '../../../core/localization/app_texts.dart';
 import '../../../core/localization/language.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/constants/ai_constants.dart';
+import '../../../core/services/database_service.dart';
+import '../../recipes/models/recipe_model.dart';
 
 class SmartSuggestionPage extends StatefulWidget {
   final Language lang;
@@ -21,28 +23,43 @@ class _SmartSuggestionPageState extends State<SmartSuggestionPage> {
   final List<_ChatMsg> _messages = [];
   bool _isTyping = false;
 
-  late final GenerativeModel? _model;
-  late final ChatSession? _chatSession;
+  GenerativeModel? _model;
+  ChatSession? _chatSession;
 
   @override
   void initState() {
     super.initState();
+    _initAI();
+
     _messages.add(_ChatMsg(
       text: widget.lang == Language.tr
-          ? "Merhaba! Dolabındaki ürünlere göre sana önerilerde bulunabilirim. Soruyu sor!"
+          ? "Merhaba! Dolabındaki ürünlere göre sana önerilerde bulunabilirim. Sorunu sor!"
           : "Hello! I can give you suggestions based on your fridge items. Ask away!",
       isUser: false,
     ));
+  }
 
+  void _initAI() {
     if (AIConstants.geminiApiKey.isNotEmpty) {
+      final systemPrompt = widget.lang == Language.tr
+          ? 'Sen bir akıllı mutfak asistanısın. Kullanıcının buzdolabındaki malzemelere göre tarif önerilerinde bulunuyorsun.\n\n'
+              'Tarif verdiğinde, MUTLAKA aşağıdaki formatı kullan:\n\n'
+              '[TARIF_ADI]Tarifin adı[/TARIF_ADI]\n'
+              '[MALZEMELER]\n- Malzeme 1\n- Malzeme 2\n[/MALZEMELER]\n'
+              '[HAZIRLANISI]\nAdım adım hazırlanış.\n[/HAZIRLANISI]\n'
+              '[SURE]Dakika cinsinden süre, sadece sayı[/SURE]\n'
+              '[ZORLUK]Kolay veya Orta veya Zor[/ZORLUK]\n\n'
+              'Tarif dışı sorularda normal yanıt ver.'
+          : 'You are a smart kitchen assistant. Provide recipes based on fridge ingredients.\n\n'
+              'Format:\n[TARIF_ADI]Name[/TARIF_ADI]\n[MALZEMELER]\n- Item\n[/MALZEMELER]\n'
+              '[HAZIRLANISI]\nSteps\n[/HAZIRLANISI]\n[SURE]Minutes[/SURE]\n[ZORLUK]Easy/Medium/Hard[/ZORLUK]';
+
       _model = GenerativeModel(
         model: AIConstants.geminiModel,
         apiKey: AIConstants.geminiApiKey,
+        systemInstruction: Content.text(systemPrompt),
       );
       _chatSession = _model!.startChat();
-    } else {
-      _model = null;
-      _chatSession = null;
     }
   }
 
@@ -54,7 +71,7 @@ class _SmartSuggestionPageState extends State<SmartSuggestionPage> {
   }
 
   void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future.delayed(const Duration(milliseconds: 100), () {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
@@ -65,38 +82,88 @@ class _SmartSuggestionPageState extends State<SmartSuggestionPage> {
     });
   }
 
-  Future<void> _sendMessage() async {
-    final text = _controller.text.trim();
-    if (text.isEmpty) return;
+  static final _titleTag =
+      RegExp(r'\[TARIF_ADI\](.*?)\[/TARIF_ADI\]', dotAll: true);
+  static final _ingredientsTag =
+      RegExp(r'\[MALZEMELER\](.*?)\[/MALZEMELER\]', dotAll: true);
+  static final _instructionsTag =
+      RegExp(r'\[HAZIRLANISI\](.*?)\[/HAZIRLANISI\]', dotAll: true);
+  static final _timeTag =
+      RegExp(r'\[SURE\](.*?)\[/SURE\]', dotAll: true);
+  static final _difficultyTag =
+      RegExp(r'\[ZORLUK\](.*?)\[/ZORLUK\]', dotAll: true);
 
-    FocusScope.of(context).unfocus();
+  bool _hasRecipeTags(String text) => _titleTag.hasMatch(text);
+
+  String _formatRecipeForDisplay(String text) {
+    if (!_hasRecipeTags(text)) return text;
+
+    final title = _titleTag.firstMatch(text)?.group(1)?.trim() ?? '';
+    final ingredientsRaw =
+        _ingredientsTag.firstMatch(text)?.group(1)?.trim() ?? '';
+    final instructions =
+        _instructionsTag.firstMatch(text)?.group(1)?.trim() ?? '';
+    final time = _timeTag.firstMatch(text)?.group(1)?.trim() ?? '';
+    final difficulty = _difficultyTag.firstMatch(text)?.group(1)?.trim() ?? '';
+
+    final buf = StringBuffer();
+    if (title.isNotEmpty) buf.writeln('🍳 $title\n');
+    if (ingredientsRaw.isNotEmpty) {
+      buf.writeln(
+          widget.lang == Language.tr ? '📝 Malzemeler:' : '📝 Ingredients:');
+      buf.writeln('$ingredientsRaw\n');
+    }
+    if (instructions.isNotEmpty) {
+      buf.writeln(
+          widget.lang == Language.tr ? '👨‍🍳 Hazırlanışı:' : '👨‍🍳 Instructions:');
+      buf.writeln('$instructions\n');
+    }
+    if (time.isNotEmpty) {
+      buf.writeln(
+          '⏱ ${widget.lang == Language.tr ? "Süre" : "Time"}: $time dk');
+    }
+    if (difficulty.isNotEmpty) {
+      buf.writeln(
+          '📊 ${widget.lang == Language.tr ? "Zorluk" : "Difficulty"}: $difficulty');
+    }
+
+    return buf.toString().trim();
+  }
+
+  Future<void> _sendMessage() async {
+    final userText = _controller.text.trim();
+    if (userText.isEmpty) return;
 
     setState(() {
-      _messages.add(_ChatMsg(text: text, isUser: true));
+      _messages.add(_ChatMsg(text: userText, isUser: true));
       _isTyping = true;
     });
-
     _controller.clear();
     _scrollToBottom();
 
     if (_chatSession == null) {
-      await Future.delayed(const Duration(seconds: 1));
-      if (mounted) {
-        setState(() {
-          _isTyping = false;
-          _messages.add(_ChatMsg(
-            text: AppTexts.of("assistant_api_missing", widget.lang),
-            isUser: false,
-          ));
-        });
-        _scrollToBottom();
-      }
+      setState(() {
+        _isTyping = false;
+        _messages.add(_ChatMsg(
+          text: AppTexts.of("assistant_api_missing", widget.lang),
+          isUser: false,
+        ));
+      });
       return;
     }
 
     try {
-      final response = await _chatSession.sendMessage(Content.text(text));
-      final replyText = response.text ?? "Yanıt alınamadı.";
+      final fridgeItems = await DatabaseService().getItems();
+      final itemsString = fridgeItems.map((e) => e.name).join(", ");
+
+      final promptWithContext = widget.lang == Language.tr
+          ? "Buzdolabımdaki ürünler: $itemsString. Sorum şu: $userText"
+          : "Items in my fridge: $itemsString. My question: $userText";
+
+      final response =
+          await _chatSession!.sendMessage(Content.text(promptWithContext));
+      final replyText = response.text ?? "...";
+
       if (mounted) {
         setState(() {
           _isTyping = false;
@@ -108,316 +175,152 @@ class _SmartSuggestionPageState extends State<SmartSuggestionPage> {
       if (mounted) {
         setState(() {
           _isTyping = false;
-          _messages.add(_ChatMsg(
-            text: "${AppTexts.of("error_prefix", widget.lang)}: $e",
-            isUser: false,
-          ));
+          _messages.add(_ChatMsg(text: "Hata: $e", isUser: false));
         });
-        _scrollToBottom();
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final lang = widget.lang;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
+        title: Text(AppTexts.of("smart_suggestion_page_title", widget.lang)),
         centerTitle: true,
-        title: Text(
-          AppTexts.of("smart_suggestion_page_title", lang),
-          style: const TextStyle(
-            fontWeight: FontWeight.w900,
-            color: AppColors.text,
-            fontSize: 20,
-          ),
-        ),
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: AppColors.text),
-        ),
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFF1F5F9),
-              Color(0xFFF8FAFC),
-              Color(0xFFF0F9FF),
-            ],
-          ),
-        ),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
-          physics: const BouncingScrollPhysics(),
-          children: [
-            // Subtitle
-            Text(
-              AppTexts.of("smart_suggestion_page_subtitle", lang),
-              style: const TextStyle(
-                fontSize: 15,
-                color: AppColors.textMuted,
-                fontWeight: FontWeight.w500,
-              ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              AppTexts.of("smart_suggestion_page_subtitle", widget.lang),
+              style: const TextStyle(color: AppColors.textMuted),
             ),
-            const SizedBox(height: 24),
-
-            // Smart assistant chat
-            _buildAssistantSection(lang),
-            const SizedBox(height: 24),
-
-            // Recipes section card
-            _buildRecipesSection(lang),
-          ],
-        ),
+          ),
+          Expanded(
+            child: _buildAssistantSection(widget.lang),
+          ),
+          const SizedBox(height: 10),
+        ],
       ),
     );
   }
 
   Widget _buildAssistantSection(Language lang) {
     return Container(
-      padding: const EdgeInsets.all(22),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.95),
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.white, width: 2),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.08),
-            blurRadius: 40,
-            offset: const Offset(0, 16),
-          ),
+              color: Colors.black.withOpacity(0.05), blurRadius: 10)
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.auto_awesome_rounded,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppTexts.of("smart_suggestion_assistant_title", lang),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.text,
-                      ),
-                    ),
-                    Text(
-                      AppTexts.of("smart_suggestion_assistant_subtitle", lang),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textMuted,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Chat area
-          Container(
-            constraints: const BoxConstraints(minHeight: 200, maxHeight: 350),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.fieldFill.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.border.withOpacity(0.5)),
-            ),
+          Expanded(
             child: ListView.separated(
               controller: _scrollController,
-              shrinkWrap: true,
               itemCount: _messages.length + (_isTyping ? 1 : 0),
               separatorBuilder: (_, __) => const SizedBox(height: 12),
-              physics: const ClampingScrollPhysics(),
               itemBuilder: (context, index) {
                 if (_isTyping && index == _messages.length) {
                   return _buildTypingIndicator(lang);
                 }
-                final message = _messages[index];
-                return _buildMessageBubble(message);
+                return _buildMessageBubble(_messages[index]);
               },
             ),
           ),
-          const SizedBox(height: 16),
+          const Divider(height: 24),
           _buildChatInput(lang),
         ],
       ),
     );
   }
 
-  Widget _buildRecipesSection(Language lang) {
-    return GestureDetector(
-      onTap: () {
-        // Navigate to recipes tab – we'll pop back and user can navigate
-        Navigator.pop(context, 'go_recipes');
-      },
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.secondary, Color(0xFF059669)],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.secondary.withOpacity(0.3),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: const Icon(
-                Icons.restaurant_menu_rounded,
-                color: Colors.white,
-                size: 28,
-              ),
-            ),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    AppTexts.of("smart_suggestion_recipes_title", lang),
-                    style: const TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    AppTexts.of("smart_suggestion_recipes_subtitle", lang),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white.withOpacity(0.8),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: Colors.white,
-              size: 18,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTypingIndicator(Language lang) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(
-              width: 12,
-              height: 12,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation(AppColors.primary),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              AppTexts.of("assistant_typing", lang),
-              style: const TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildMessageBubble(_ChatMsg message) {
+    final bool isRecipe = !message.isUser && _hasRecipeTags(message.text);
+
     return Align(
       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        constraints: const BoxConstraints(maxWidth: 280),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: message.isUser ? AppColors.primary : Colors.white,
-          borderRadius: BorderRadius.circular(20).copyWith(
-            bottomRight: message.isUser
-                ? const Radius.circular(4)
-                : const Radius.circular(20),
-            bottomLeft: message.isUser
-                ? const Radius.circular(20)
-                : const Radius.circular(4),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: message.isUser
-                  ? AppColors.primary.withOpacity(0.2)
-                  : Colors.black.withOpacity(0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+      child: Column(
+        crossAxisAlignment: message.isUser
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color:
+                  message.isUser ? AppColors.primary : AppColors.fieldFill,
+              borderRadius: BorderRadius.circular(16),
             ),
-          ],
-          border: message.isUser ? null : Border.all(color: AppColors.border),
-        ),
-        child: Text(
-          message.text,
-          style: TextStyle(
-            color: message.isUser ? Colors.white : AppColors.text,
-            fontSize: 14,
-            height: 1.45,
-            fontWeight: message.isUser ? FontWeight.w600 : FontWeight.w500,
+            child: Text(
+              message.isUser
+                  ? message.text
+                  : _formatRecipeForDisplay(message.text),
+              style: TextStyle(
+                  color:
+                      message.isUser ? Colors.white : AppColors.text),
+            ),
           ),
-        ),
+          if (isRecipe)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: ElevatedButton.icon(
+                onPressed: () => _showSaveRecipeSheet(message.text),
+                icon: const Icon(Icons.bookmark_border, size: 18),
+                label: Text(AppTexts.of("recipe_save_btn", widget.lang)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary.withOpacity(0.1),
+                  foregroundColor: AppColors.primary,
+                  elevation: 0,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showSaveRecipeSheet(String aiText) {
+    final String title =
+        _titleTag.firstMatch(aiText)?.group(1)?.trim() ?? 'Yeni Tarif';
+    final String ingredientsRaw =
+        _ingredientsTag.firstMatch(aiText)?.group(1)?.trim() ?? '';
+    final List<String> ingredients = ingredientsRaw
+        .split('\n')
+        .map((e) => e.replaceAll('-', '').trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final String instructions =
+        _instructionsTag.firstMatch(aiText)?.group(1)?.trim() ?? '';
+    final int time =
+        int.tryParse(_timeTag.firstMatch(aiText)?.group(1) ?? '20') ?? 20;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _RecipeSaveSheet(
+        lang: widget.lang,
+        initialTitle: title,
+        initialIngredients: ingredients,
+        initialDescription: instructions,
+        initialPrepMinutes: time,
+        onSave: (RecipeModel recipe) async {
+          await DatabaseService().insertRecipe(recipe);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    AppTexts.of("recipe_added_success", widget.lang)),
+              ),
+            );
+          }
+        },
       ),
     );
   }
@@ -428,60 +331,33 @@ class _SmartSuggestionPageState extends State<SmartSuggestionPage> {
         Expanded(
           child: TextField(
             controller: _controller,
-            minLines: 1,
-            maxLines: 4,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-            textInputAction: TextInputAction.send,
-            onSubmitted: (_) => _sendMessage(),
             decoration: InputDecoration(
-              hintText: AppTexts.of("smart_suggestion_assistant_hint", lang),
-              hintStyle: const TextStyle(
-                color: AppColors.textMuted,
-                fontWeight: FontWeight.w500,
-              ),
-              filled: true,
-              fillColor: AppColors.fieldFill,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 16,
-              ),
+              hintText: AppTexts.of(
+                  "smart_suggestion_assistant_hint", lang),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(20),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(20),
-                borderSide: const BorderSide(
-                  color: AppColors.primary,
-                  width: 1.5,
-                ),
-              ),
+                  borderRadius: BorderRadius.circular(12)),
             ),
+            onSubmitted: (_) => _sendMessage(),
           ),
         ),
-        const SizedBox(width: 12),
-        Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
-                blurRadius: 15,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: IconButton.filled(
-            onPressed: _sendMessage,
-            icon: const Icon(Icons.send_rounded, size: 22),
-            style: IconButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.all(16),
-            ),
-          ),
+        IconButton(
+          onPressed: _sendMessage,
+          icon: const Icon(Icons.send, color: AppColors.primary),
         ),
       ],
+    );
+  }
+
+  Widget _buildTypingIndicator(Language lang) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          AppTexts.of("assistant_typing", lang),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
     );
   }
 }
@@ -489,5 +365,222 @@ class _SmartSuggestionPageState extends State<SmartSuggestionPage> {
 class _ChatMsg {
   final String text;
   final bool isUser;
-  const _ChatMsg({required this.text, required this.isUser});
+  _ChatMsg({required this.text, required this.isUser});
+}
+
+class _RecipeSaveSheet extends StatefulWidget {
+  final Language lang;
+  final String initialTitle;
+  final List<String> initialIngredients;
+  final String initialDescription;
+  final int initialPrepMinutes;
+  final Future<void> Function(RecipeModel) onSave;
+
+  const _RecipeSaveSheet({
+    super.key,
+    required this.lang,
+    required this.initialTitle,
+    required this.initialIngredients,
+    required this.initialDescription,
+    this.initialPrepMinutes = 20,
+    required this.onSave,
+  });
+
+  @override
+  State<_RecipeSaveSheet> createState() => _RecipeSaveSheetState();
+}
+
+class _RecipeSaveSheetState extends State<_RecipeSaveSheet> {
+  late TextEditingController _titleController;
+  late TextEditingController _ingController;
+  late TextEditingController _descController;
+  late TextEditingController _prepMinutesController;
+  late String _selectedDifficulty;
+  late IconData _selectedIcon;
+  late List<Color> _selectedGradient;
+
+  final List<IconData> _availableIcons = [
+    Icons.restaurant,
+    Icons.egg_rounded,
+    Icons.soup_kitchen_rounded,
+    Icons.dinner_dining_rounded,
+    Icons.set_meal_rounded,
+    Icons.eco_rounded,
+    Icons.fastfood_rounded,
+    Icons.breakfast_dining_rounded,
+    Icons.rice_bowl_rounded,
+    Icons.blender_rounded,
+  ];
+
+  final List<List<Color>> _availableGradients = [
+    [const Color(0xFF667eea), const Color(0xFF764ba2)],
+    [const Color(0xFFEF4444), const Color(0xFFF97316)],
+    [const Color(0xFFF59E0B), const Color(0xFFEAB308)],
+    [const Color(0xFF6366F1), const Color(0xFF8B5CF6)],
+    [const Color(0xFF10B981), const Color(0xFF059669)],
+    [const Color(0xFF22C55E), const Color(0xFF84CC16)],
+    [const Color(0xFFF97316), const Color(0xFFFBBF24)],
+    [const Color(0xFF8B5CF6), const Color(0xFFA855F7)],
+    [const Color(0xFFE11D48), const Color(0xFFBE185D)],
+    [const Color(0xFFEC4899), const Color(0xFFF472B6)],
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.initialTitle);
+    _ingController = TextEditingController(
+      text: widget.initialIngredients.join(', '),
+    );
+    _descController = TextEditingController(text: widget.initialDescription);
+    _prepMinutesController =
+        TextEditingController(text: widget.initialPrepMinutes.toString());
+    _selectedDifficulty = 'recipe_easy';
+    _selectedIcon = Icons.restaurant;
+    _selectedGradient = _availableGradients[0];
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _ingController.dispose();
+    _descController.dispose();
+    _prepMinutesController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+        left: 20,
+        right: 20,
+        top: 20,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _titleController,
+              decoration: InputDecoration(
+                labelText: AppTexts.of("recipe_name", widget.lang),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _ingController,
+              decoration: InputDecoration(
+                labelText: AppTexts.of("recipe_ingredients", widget.lang),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _descController,
+              maxLines: 4,
+              decoration: InputDecoration(
+                labelText: AppTexts.of("recipe_desc", widget.lang),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _prepMinutesController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: AppTexts.of("recipe_prep_time_label", widget.lang),
+              ),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: _selectedDifficulty,
+              items: ['recipe_easy', 'recipe_medium', 'recipe_hard']
+                  .map((d) => DropdownMenuItem(
+                        value: d,
+                        child: Text(AppTexts.of(d, widget.lang)),
+                      ))
+                  .toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _selectedDifficulty = value);
+                }
+              },
+              decoration: InputDecoration(
+                labelText:
+                    AppTexts.of("recipe_difficulty_label", widget.lang),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(AppTexts.of("product", widget.lang),
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 50,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: _availableIcons.length,
+                itemBuilder: (context, index) {
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedIcon = _availableIcons[index];
+                        _selectedGradient = _availableGradients[index];
+                      });
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: _availableGradients[index],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _selectedIcon == _availableIcons[index]
+                              ? Colors.white
+                              : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                      child: Icon(
+                        _availableIcons[index],
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                final recipe = RecipeModel(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  nameKey: _titleController.text,
+                  descKey: _descController.text,
+                  ingredients: _ingController.text
+                      .split(',')
+                      .map((e) => e.trim())
+                      .where((e) => e.isNotEmpty)
+                      .toList(),
+                  prepMinutes:
+                      int.tryParse(_prepMinutesController.text) ?? 20,
+                  difficultyKey: _selectedDifficulty,
+                  icon: _selectedIcon,
+                  gradientColors: _selectedGradient,
+                );
+                await widget.onSave(recipe);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
+              },
+              child: Text(AppTexts.of("recipe_save_btn", widget.lang)),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
 }

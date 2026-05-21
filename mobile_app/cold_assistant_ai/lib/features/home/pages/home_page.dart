@@ -15,6 +15,9 @@ import '../../pending/pages/pending_page.dart';
 import '../widgets/assistant_chat_widget.dart';
 import '../widgets/expiry_reminder_card.dart';
 import 'smart_suggestion_page.dart';
+import 'notifications_page.dart';
+import '../../profile/pages/profile_page.dart';
+import '../../settings/pages/settings_page.dart';
 
 class HomePage extends StatefulWidget {
   final Language lang;
@@ -50,26 +53,26 @@ class _HomePageState extends State<HomePage> {
 
     switch (value) {
       case 'profile':
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppTexts.of("profile_coming_soon", lang)),
-            behavior: SnackBarBehavior.floating,
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProfilePage(lang: lang),
           ),
         );
         break;
       case 'settings':
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppTexts.of("settings_coming_soon", lang)),
-            behavior: SnackBarBehavior.floating,
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SettingsPage(lang: lang),
           ),
         );
         break;
       case 'notifications':
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppTexts.of("notifications_coming_soon", lang)),
-            behavior: SnackBarBehavior.floating,
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => NotificationsPage(lang: lang),
           ),
         );
         break;

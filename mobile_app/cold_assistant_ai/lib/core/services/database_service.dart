@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../../features/my_fridge/models/fridge_item_model.dart';
+import '../../features/recipes/models/recipe_model.dart';
 
 class DatabaseService {
   static final DatabaseService _instance = DatabaseService._internal();
@@ -19,7 +20,7 @@ class DatabaseService {
     String path = join(await getDatabasesPath(), 'cold_ai.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE fridge_items(
@@ -32,6 +33,34 @@ class DatabaseService {
             expiryDate TEXT
           )
         ''');
+        await db.execute('''
+          CREATE TABLE recipes(
+            id TEXT PRIMARY KEY,
+            name TEXT,
+            description TEXT,
+            ingredients TEXT,
+            prepMinutes INTEGER,
+            difficulty TEXT,
+            iconCode INTEGER,
+            gradientColors TEXT
+          )
+        ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('''
+            CREATE TABLE recipes(
+              id TEXT PRIMARY KEY,
+              name TEXT,
+              description TEXT,
+              ingredients TEXT,
+              prepMinutes INTEGER,
+              difficulty TEXT,
+              iconCode INTEGER,
+              gradientColors TEXT
+            )
+          ''');
+        }
       },
     );
   }
@@ -67,6 +96,33 @@ class DatabaseService {
     final db = await database;
     await db.delete(
       'fridge_items',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // Recipes CRUD operations
+  Future<void> insertRecipe(RecipeModel recipe) async {
+    final db = await database;
+    await db.insert(
+      'recipes',
+      recipe.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<RecipeModel>> getRecipes() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query('recipes');
+    return List.generate(maps.length, (i) {
+      return RecipeModel.fromMap(maps[i]);
+    });
+  }
+
+  Future<void> deleteRecipe(String id) async {
+    final db = await database;
+    await db.delete(
+      'recipes',
       where: 'id = ?',
       whereArgs: [id],
     );

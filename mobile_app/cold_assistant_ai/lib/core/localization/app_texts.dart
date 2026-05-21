@@ -629,6 +629,50 @@ class AppTexts {
       Language.tr: "Bilgileri kendin gir",
       Language.en: "Enter details manually",
     },
+    "recipe_add_title": {
+      Language.tr: "Tarifi Kaydet",
+      Language.en: "Save Recipe",
+    },
+    "recipe_added_success": {
+      Language.tr: "Tarif başarıyla kaydedildi!",
+      Language.en: "Recipe successfully saved!",
+    },
+    "recipe_name": {
+      Language.tr: "Tarif Adı",
+      Language.en: "Recipe Name",
+    },
+    "recipe_desc": {
+      Language.tr: "Hazırlanışı / Tarif Açıklaması",
+      Language.en: "Preparation / Recipe Description",
+    },
+    "recipe_save_btn": {
+      Language.tr: "Tariflerime Ekle",
+      Language.en: "Add to My Recipes",
+    },
+    "recipe_deleted": {
+      Language.tr: "Tarif silindi",
+      Language.en: "Recipe deleted",
+    },
+    "go_to_recipes": {
+      Language.tr: "Tariflere Git",
+      Language.en: "Go to Recipes",
+    },
+    "recipe_add_to_recipes_tooltip": {
+      Language.tr: "Bu öneriyi tarife dönüştür",
+      Language.en: "Convert this suggestion into a recipe",
+    },
+    "recipe_difficulty_label": {
+      Language.tr: "Zorluk Derecesi",
+      Language.en: "Difficulty Level",
+    },
+    "recipe_prep_time_label": {
+      Language.tr: "Hazırlanış Süresi (dk)",
+      Language.en: "Prep Time (min)",
+    },
+    "recipe_ingredients_hint": {
+      Language.tr: "Malzemeler (Virgülle ayırın)",
+      Language.en: "Ingredients (Comma-separated)",
+    },
   };
 
   static String of(String key, Language lang) {
