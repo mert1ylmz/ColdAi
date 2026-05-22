@@ -31,7 +31,7 @@ env/
 *.sqlite3
 
 # Models and Large Files
-models/
+# models/ dizinini ignore etme — Dart model dosyaları (recipe_model.dart vb.) tracked olmalı
 *.keras
 *.h5
 *.onnx
