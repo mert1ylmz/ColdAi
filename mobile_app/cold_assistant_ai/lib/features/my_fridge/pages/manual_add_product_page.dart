@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/localization/app_texts.dart';
 import '../../../core/localization/language.dart';
 import '../../../core/theme/app_colors.dart';
+import '../data/shelf_life_table.dart';
 import '../models/fridge_item_model.dart';
 
 class ManualAddProductPage extends StatefulWidget {
@@ -20,7 +21,9 @@ class _ManualAddProductPageState extends State<ManualAddProductPage> {
   final TextEditingController _noteController = TextEditingController();
 
   String _selectedCategory = '';
+  FreshnessStatus _status = FreshnessStatus.fresh;
   DateTime _expiryDate = DateTime.now().add(const Duration(days: 7));
+  bool _expiryAutoSet = true;
 
   static const List<String> _categoryKeys = [
     'filter_fruit',
@@ -63,8 +66,19 @@ class _ManualAddProductPageState extends State<ManualAddProductPage> {
     if (selected != null) {
       setState(() {
         _expiryDate = selected;
+        _expiryAutoSet = false;
       });
     }
+  }
+
+  void _recomputeExpiry() {
+    if (!_expiryAutoSet || _selectedCategory.isEmpty) return;
+    final days = _status == FreshnessStatus.opened
+        ? ShelfLifeTable.openedDaysFor(_selectedCategory)
+        : ShelfLifeTable.defaultDaysFor(_selectedCategory);
+    setState(() {
+      _expiryDate = DateTime.now().add(Duration(days: days));
+    });
   }
 
   void _saveProduct() {
@@ -95,6 +109,8 @@ class _ManualAddProductPageState extends State<ManualAddProductPage> {
       note: _noteController.text.trim(),
       createdAt: DateTime.now(),
       expiryDate: _expiryDate,
+      categoryKey: _selectedCategory.isEmpty ? null : _selectedCategory,
+      status: _status,
     );
 
     Navigator.pop(context, item);
@@ -234,6 +250,10 @@ class _ManualAddProductPageState extends State<ManualAddProductPage> {
                   _buildCategorySelector(lang),
                   const SizedBox(height: 16),
 
+                  // Freshness status selector
+                  _buildStatusSelector(lang),
+                  const SizedBox(height: 16),
+
                   // Quantity
                   _buildInput(
                     label: AppTexts.of("quantity", lang),
@@ -345,6 +365,7 @@ class _ManualAddProductPageState extends State<ManualAddProductPage> {
                 setState(() {
                   _selectedCategory = isSelected ? '' : key;
                 });
+                _recomputeExpiry();
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
@@ -367,6 +388,84 @@ class _ManualAddProductPageState extends State<ManualAddProductPage> {
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: isSelected ? Colors.white : AppColors.text,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusSelector(Language lang) {
+    final tr = lang == Language.tr;
+    final options = <(FreshnessStatus, String, IconData)>[
+      (FreshnessStatus.fresh, tr ? "Taze" : "Fresh", Icons.eco_rounded),
+      (FreshnessStatus.sealed, tr ? "Açılmamış" : "Sealed", Icons.lock_rounded),
+      (FreshnessStatus.opened, tr ? "Açılmış" : "Opened", Icons.lock_open_rounded),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.spa_rounded, color: AppColors.primary, size: 22),
+            const SizedBox(width: 12),
+            Text(
+              tr ? "Durum" : "Status",
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textMuted,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: options.map((o) {
+            final selected = _status == o.$1;
+            return Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() => _status = o.$1);
+                    _recomputeExpiry();
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: selected ? AppColors.primary : AppColors.fieldFill,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: selected
+                            ? AppColors.primary
+                            : AppColors.border.withOpacity(0.5),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          o.$3,
+                          color: selected ? Colors.white : AppColors.textMuted,
+                          size: 18,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          o.$2,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: selected ? Colors.white : AppColors.text,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

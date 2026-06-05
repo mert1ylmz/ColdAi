@@ -38,7 +38,7 @@ class NotificationService {
     for (var item in fridgeItems) {
       if (item.expiryDate == null) continue;
 
-      final expiryDate = item.expiryDate;
+      final expiryDate = item.expiryDate!;
       if (expiryDate == null) continue;
 
       if (expiryDate.isBefore(warningDate) && expiryDate.isAfter(now)) {

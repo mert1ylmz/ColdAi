@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/localization/app_texts.dart';
 import '../../../core/localization/language.dart';
+import '../../../core/localization/language_controller.dart';
 import '../../../core/theme/app_colors.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/language_toggle.dart';
@@ -18,11 +19,14 @@ class AuthPage extends StatefulWidget {
 
 class _AuthPageState extends State<AuthPage> {
   bool isLogin = true;
-  Language lang = Language.tr;
+  Language lang = LanguageController.instance.value;
   final _auth = AuthService();
 
   void toggleMode() => setState(() => isLogin = !isLogin);
-  void setLang(Language v) => setState(() => lang = v);
+  void setLang(Language v) {
+    setState(() => lang = v);
+    LanguageController.instance.setLanguage(v);
+  }
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

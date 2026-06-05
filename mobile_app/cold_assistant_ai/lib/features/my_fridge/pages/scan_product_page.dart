@@ -1,13 +1,19 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/localization/app_texts.dart';
 import '../../../core/localization/language.dart';
 import '../../../core/theme/app_colors.dart';
 import '../services/detected_product_mapper.dart';
 import '../services/product_detection_service.dart';
+import '../services/tflite_product_detection_service.dart';
 import 'detected_product_edit_page.dart';
+
+enum ProductEngine { gemini, tflite }
+
+const _kProductEnginePrefKey = 'product_engine';
 
 class ScanProductPage extends StatefulWidget {
   final Language lang;
@@ -23,11 +29,46 @@ class _ScanProductPageState extends State<ScanProductPage> {
   bool _loading = false;
   Map<String, dynamic>? _result;
   String? _errorMessage;
+  ProductEngine _engine = ProductEngine.gemini;
 
   final ImagePicker picker = ImagePicker();
+  final _geminiService = ProductDetectionService();
+  final _tfliteService = TfliteProductDetectionService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEnginePref();
+  }
+
+  @override
+  void dispose() {
+    _tfliteService.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadEnginePref() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_kProductEnginePrefKey);
+    if (saved == ProductEngine.tflite.name && mounted) {
+      setState(() => _engine = ProductEngine.tflite);
+    }
+  }
+
+  Future<void> _setEngine(ProductEngine engine) async {
+    setState(() => _engine = engine);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kProductEnginePrefKey, engine.name);
+  }
 
   Future<void> pickImage(ImageSource source) async {
-    final picked = await picker.pickImage(source: source);
+    // maxWidth + imageQuality, iOS'ta HEIC'i otomatik JPEG'e çevirmeyi
+    // tetikler (image_picker_ios davranışı) ve TFLite decode'unu garantiler.
+    final picked = await picker.pickImage(
+      source: source,
+      maxWidth: 1024,
+      imageQuality: 90,
+    );
     if (picked == null) return;
 
     setState(() {
@@ -37,8 +78,9 @@ class _ScanProductPageState extends State<ScanProductPage> {
       _errorMessage = null;
     });
 
-    final service = ProductDetectionService();
-    final result = await service.detectProduct(_image!);
+    final result = _engine == ProductEngine.gemini
+        ? await _geminiService.detectProduct(_image!)
+        : await _tfliteService.detectProduct(_image!);
 
     if (!mounted) return;
 
@@ -101,6 +143,8 @@ class _ScanProductPageState extends State<ScanProductPage> {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Column(
           children: [
+            _buildEngineSelector(lang),
+            const SizedBox(height: 12),
             // Image Preview or Placeholder
             Expanded(
               child: Container(
@@ -223,6 +267,32 @@ class _ScanProductPageState extends State<ScanProductPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEngineSelector(Language lang) {
+    return SegmentedButton<ProductEngine>(
+      segments: [
+        ButtonSegment(
+          value: ProductEngine.gemini,
+          label: Text(AppTexts.of("engine_gemini", lang)),
+          icon: const Icon(Icons.cloud_outlined, size: 18),
+        ),
+        ButtonSegment(
+          value: ProductEngine.tflite,
+          label: Text(AppTexts.of("engine_offline", lang)),
+          icon: const Icon(Icons.memory_rounded, size: 18),
+        ),
+      ],
+      selected: {_engine},
+      onSelectionChanged: _loading
+          ? null
+          : (set) => _setEngine(set.first),
+      style: ButtonStyle(
+        textStyle: const WidgetStatePropertyAll(
+          TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+        ),
       ),
     );
   }

@@ -7,10 +7,14 @@ import '../models/fridge_item_model.dart';
 import '../widgets/add_product_options_sheet.dart';
 import '../widgets/empty_fridge_view.dart';
 import '../widgets/fridge_item_card.dart';
+import '../widgets/fridge_item_action_sheet.dart';
 import 'scan_product_page.dart';
 import 'scan_receipt_page.dart';
 import 'manual_add_product_page.dart';
 import '../../../core/services/database_service.dart';
+import '../../activity/models/activity_log_model.dart';
+import '../../activity/services/activity_log_service.dart';
+import '../../pending/pages/leave_pending_page.dart';
 
 class MyFridgePage extends StatefulWidget {
   final Language lang;
@@ -51,6 +55,155 @@ class _MyFridgePageState extends State<MyFridgePage> {
     });
   }
 
+  void _showItemActions(FridgeItemModel item) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => FridgeItemActionSheet(
+        item: item,
+        lang: widget.lang,
+        onSelected: (action) => _handleItemAction(item, action),
+      ),
+    );
+  }
+
+  Future<void> _handleItemAction(
+    FridgeItemModel item,
+    FridgeItemAction action,
+  ) async {
+    final lang = widget.lang;
+    final tr = lang == Language.tr;
+    switch (action) {
+      case FridgeItemAction.consumeAll:
+        await DatabaseService().deleteItem(item.id);
+        await ActivityLogService.instance.log(
+          itemId: item.id,
+          itemName: item.name,
+          action: ActivityAction.consumed,
+          quantity: item.quantity.isEmpty ? null : item.quantity,
+        );
+        _toast(tr ? "Tüketildi olarak kaydedildi" : "Marked as consumed",
+            AppColors.success);
+        break;
+
+      case FridgeItemAction.consumePartial:
+        final newQty = await _askQuantity(item);
+        if (newQty == null) return;
+        if (newQty.trim().isEmpty) {
+          await DatabaseService().deleteItem(item.id);
+          await ActivityLogService.instance.log(
+            itemId: item.id,
+            itemName: item.name,
+            action: ActivityAction.consumed,
+          );
+        } else {
+          final updated = item.copyWith(quantity: newQty.trim());
+          await DatabaseService().updateItem(updated);
+          await ActivityLogService.instance.log(
+            itemId: item.id,
+            itemName: item.name,
+            action: ActivityAction.partiallyConsumed,
+            quantity: newQty.trim(),
+          );
+        }
+        _toast(tr ? "Miktar güncellendi" : "Quantity updated", AppColors.primary);
+        break;
+
+      case FridgeItemAction.wasted:
+        await DatabaseService().deleteItem(item.id);
+        await ActivityLogService.instance.log(
+          itemId: item.id,
+          itemName: item.name,
+          action: ActivityAction.wasted,
+          quantity: item.quantity.isEmpty ? null : item.quantity,
+        );
+        _toast(tr ? "Atıldı olarak kaydedildi" : "Marked as wasted",
+            AppColors.error);
+        break;
+
+      case FridgeItemAction.share:
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => LeavePendingPage(lang: lang, source: item),
+          ),
+        );
+        if (result != null) {
+          await DatabaseService().deleteItem(item.id);
+          await ActivityLogService.instance.log(
+            itemId: item.id,
+            itemName: item.name,
+            action: ActivityAction.shared,
+          );
+          _toast(
+            tr ? "Askıya bırakıldı" : "Shared (pending)",
+            const Color(0xFF8B5CF6),
+          );
+        }
+        break;
+
+      case FridgeItemAction.edit:
+        _toast(tr ? "Düzenleme yakında" : "Edit coming soon", AppColors.primary);
+        break;
+
+      case FridgeItemAction.delete:
+        await DatabaseService().deleteItem(item.id);
+        await ActivityLogService.instance.log(
+          itemId: item.id,
+          itemName: item.name,
+          action: ActivityAction.deleted,
+        );
+        _toast(tr ? "Silindi" : "Deleted", AppColors.textMuted);
+        break;
+    }
+    _loadItems();
+  }
+
+  Future<String?> _askQuantity(FridgeItemModel item) async {
+    final tr = widget.lang == Language.tr;
+    final controller = TextEditingController(text: item.quantity);
+    return showDialog<String>(
+      context: context,
+      builder: (c) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(tr ? "Yeni miktar" : "New quantity"),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: tr ? "Örn: 250 g" : "e.g. 250 g",
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c),
+            child: Text(tr ? "Vazgeç" : "Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(c, controller.text),
+            child: Text(tr ? "Kaydet" : "Save"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _toast(String msg, Color color) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
   List<FridgeItemModel> get _filteredItems {
     if (_selectedFilter == 'filter_all') return _items;
     final filterText = AppTexts.of(_selectedFilter, widget.lang);
@@ -79,6 +232,12 @@ class _MyFridgePageState extends State<MyFridgePage> {
 
             if (result != null && result is FridgeItemModel) {
               await DatabaseService().insertItem(result);
+              await ActivityLogService.instance.log(
+                itemId: result.id,
+                itemName: result.name,
+                action: ActivityAction.added,
+                quantity: result.quantity.isEmpty ? null : result.quantity,
+              );
               _loadItems();
 
               if (!mounted) return;
@@ -118,6 +277,12 @@ class _MyFridgePageState extends State<MyFridgePage> {
 
             if (result != null && result is FridgeItemModel) {
               await DatabaseService().insertItem(result);
+              await ActivityLogService.instance.log(
+                itemId: result.id,
+                itemName: result.name,
+                action: ActivityAction.added,
+                quantity: result.quantity.isEmpty ? null : result.quantity,
+              );
               _loadItems();
 
               if (!mounted) return;
@@ -194,7 +359,12 @@ class _MyFridgePageState extends State<MyFridgePage> {
               ..._filteredItems.map(
                 (item) => Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: FridgeItemCard(item: item, lang: lang),
+                  child: FridgeItemCard(
+                    item: item,
+                    lang: lang,
+                    onTap: () => _showItemActions(item),
+                    onLongPress: () => _showItemActions(item),
+                  ),
                 ),
               ),
           ],

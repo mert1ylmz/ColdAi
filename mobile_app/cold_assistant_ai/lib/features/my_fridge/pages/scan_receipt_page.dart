@@ -1,13 +1,19 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/localization/app_texts.dart';
 import '../../../core/localization/language.dart';
+import '../../../core/services/ocr_receipt_service.dart';
 import '../../../core/services/receipt_recognition_service.dart';
 import '../models/fridge_item_model.dart';
 import '../services/detected_product_mapper.dart';
 import 'detected_product_edit_page.dart';
+
+enum ReceiptEngine { gemini, ocr }
+
+const _kReceiptEnginePrefKey = 'receipt_engine';
 
 class ScanReceiptPage extends StatefulWidget {
   final Language lang;
@@ -23,9 +29,37 @@ class _ScanReceiptPageState extends State<ScanReceiptPage> {
   bool _loading = false;
   List<Map<String, dynamic>> _results = [];
   String? _errorMessage;
+  ReceiptEngine _engine = ReceiptEngine.gemini;
 
   final ImagePicker picker = ImagePicker();
-  final _ocrService = ReceiptRecognitionService();
+  final _geminiService = ReceiptRecognitionService();
+  final _ocrService = OcrReceiptService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEnginePref();
+  }
+
+  @override
+  void dispose() {
+    _ocrService.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadEnginePref() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString(_kReceiptEnginePrefKey);
+    if (saved == ReceiptEngine.ocr.name && mounted) {
+      setState(() => _engine = ReceiptEngine.ocr);
+    }
+  }
+
+  Future<void> _setEngine(ReceiptEngine engine) async {
+    setState(() => _engine = engine);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kReceiptEnginePrefKey, engine.name);
+  }
 
   Future<void> pickImage(ImageSource source) async {
     final picked = await picker.pickImage(source: source);
@@ -39,7 +73,9 @@ class _ScanReceiptPageState extends State<ScanReceiptPage> {
     });
 
     try {
-      final results = await _ocrService.scanReceipt(_image!);
+      final results = _engine == ReceiptEngine.gemini
+          ? await _geminiService.scanReceipt(_image!)
+          : await _ocrService.scanReceipt(_image!);
       if (mounted) {
         setState(() {
           _results = results;
@@ -94,6 +130,32 @@ class _ScanReceiptPageState extends State<ScanReceiptPage> {
     Navigator.pop(context, true); // true dönerek yenileme tetiklenebilir
   }
 
+  Widget _buildEngineSelector(Language lang) {
+    return SegmentedButton<ReceiptEngine>(
+      segments: [
+        ButtonSegment(
+          value: ReceiptEngine.gemini,
+          label: Text(AppTexts.of("engine_gemini", lang)),
+          icon: const Icon(Icons.cloud_outlined, size: 18),
+        ),
+        ButtonSegment(
+          value: ReceiptEngine.ocr,
+          label: Text(AppTexts.of("engine_ocr", lang)),
+          icon: const Icon(Icons.text_fields_rounded, size: 18),
+        ),
+      ],
+      selected: {_engine},
+      onSelectionChanged: _loading
+          ? null
+          : (set) => _setEngine(set.first),
+      style: ButtonStyle(
+        textStyle: const WidgetStatePropertyAll(
+          TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final lang = widget.lang;
@@ -109,6 +171,8 @@ class _ScanReceiptPageState extends State<ScanReceiptPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            _buildEngineSelector(lang),
+            const SizedBox(height: 12),
             if (_image != null)
               ClipRRect(
                 borderRadius: BorderRadius.circular(18),

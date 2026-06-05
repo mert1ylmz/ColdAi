@@ -43,3 +43,9 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# ML Model dosyaları (büyük binary — Git LFS olmadan taşınamaz)
+assets/models/
+assets/keras\ models/
+**/*.tflite
+**/*.keras

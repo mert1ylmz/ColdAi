@@ -20,7 +20,7 @@ class DatabaseService {
     String path = join(await getDatabasesPath(), 'cold_ai.db');
     return await openDatabase(
       path,
-      version: 2,
+      version: 5,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE fridge_items(
@@ -30,7 +30,10 @@ class DatabaseService {
             quantity TEXT,
             note TEXT,
             createdAt TEXT,
-            expiryDate TEXT
+            expiryDate TEXT,
+            categoryKey TEXT,
+            status TEXT,
+            productionDate TEXT
           )
         ''');
         await db.execute('''
@@ -43,6 +46,32 @@ class DatabaseService {
             difficulty TEXT,
             iconCode INTEGER,
             gradientColors TEXT
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE activity_log(
+            id TEXT PRIMARY KEY,
+            itemId TEXT,
+            itemName TEXT,
+            action TEXT,
+            quantity TEXT,
+            reason TEXT,
+            timestamp TEXT
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE pending_items(
+            id TEXT PRIMARY KEY,
+            sourceItemId TEXT,
+            name TEXT,
+            category TEXT,
+            quantity TEXT,
+            note TEXT,
+            locationLabel TEXT,
+            expiryDate TEXT,
+            status TEXT,
+            createdAt TEXT,
+            isMine INTEGER
           )
         ''');
       },
@@ -58,6 +87,47 @@ class DatabaseService {
               difficulty TEXT,
               iconCode INTEGER,
               gradientColors TEXT
+            )
+          ''');
+        }
+        if (oldVersion < 3) {
+          await db.execute(
+            "ALTER TABLE fridge_items ADD COLUMN categoryKey TEXT",
+          );
+          await db.execute(
+            "ALTER TABLE fridge_items ADD COLUMN status TEXT",
+          );
+          await db.execute(
+            "ALTER TABLE fridge_items ADD COLUMN productionDate TEXT",
+          );
+        }
+        if (oldVersion < 4) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS activity_log(
+              id TEXT PRIMARY KEY,
+              itemId TEXT,
+              itemName TEXT,
+              action TEXT,
+              quantity TEXT,
+              reason TEXT,
+              timestamp TEXT
+            )
+          ''');
+        }
+        if (oldVersion < 5) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS pending_items(
+              id TEXT PRIMARY KEY,
+              sourceItemId TEXT,
+              name TEXT,
+              category TEXT,
+              quantity TEXT,
+              note TEXT,
+              locationLabel TEXT,
+              expiryDate TEXT,
+              status TEXT,
+              createdAt TEXT,
+              isMine INTEGER
             )
           ''');
         }

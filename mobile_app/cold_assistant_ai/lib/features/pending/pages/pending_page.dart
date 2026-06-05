@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../core/localization/app_texts.dart';
 import '../../../core/localization/language.dart';
 import '../../../core/theme/app_colors.dart';
+import 'browse_pending_page.dart';
+import 'leave_pending_page.dart';
+import 'my_pending_page.dart';
 
 class PendingPage extends StatefulWidget {
   final Language lang;
@@ -76,7 +79,12 @@ class _PendingPageState extends State<PendingPage> {
               gradient: const LinearGradient(
                 colors: [AppColors.primary, Color(0xFF4F46E5)],
               ),
-              onTap: () => _showComingSoon(lang),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => LeavePendingPage(lang: lang),
+                ),
+              ),
             ),
             const SizedBox(height: 16),
             _buildActionCard(
@@ -88,7 +96,12 @@ class _PendingPageState extends State<PendingPage> {
               gradient: const LinearGradient(
                 colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
               ),
-              onTap: () => _showComingSoon(lang),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MyPendingPage(lang: lang),
+                ),
+              ),
             ),
             const SizedBox(height: 16),
             _buildActionCard(
@@ -100,7 +113,12 @@ class _PendingPageState extends State<PendingPage> {
               gradient: const LinearGradient(
                 colors: [AppColors.secondary, Color(0xFF059669)],
               ),
-              onTap: () => _showComingSoon(lang),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BrowsePendingPage(lang: lang),
+                ),
+              ),
             ),
           ],
         ),

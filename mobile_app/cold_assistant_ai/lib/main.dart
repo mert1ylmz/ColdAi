@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'core/auth_gate.dart';
+import 'core/localization/language.dart';
+import 'core/localization/language_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +16,8 @@ void main() async {
     debugPrint('Firebase başlatma hatası: $e');
   }
 
+  await LanguageController.instance.loadInitial();
+
   runApp(const ColdAssistantApp());
 }
 
@@ -22,9 +26,14 @@ class ColdAssistantApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: AuthGate(),
+    return ValueListenableBuilder<Language>(
+      valueListenable: LanguageController.instance.notifier,
+      builder: (context, _, __) {
+        return const MaterialApp(
+          debugShowCheckedModeBanner: false,
+          home: AuthGate(),
+        );
+      },
     );
   }
 }

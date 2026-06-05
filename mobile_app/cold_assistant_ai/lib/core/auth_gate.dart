@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import 'localization/language.dart';
+import 'localization/language_controller.dart';
 import '../features/auth/pages/auth_page.dart';
 import '../features/home/pages/home_page.dart';
 import '../features/onboarding/pages/onboarding_page.dart';
@@ -71,11 +71,13 @@ class AuthGate extends StatelessWidget {
 
             final data = userSnap.data?.data();
             final completed = (data?['onboardingCompleted'] as bool?) ?? false;
-            final langStr = (data != null && data['language'] != null)
-                ? data['language'] as String
-                : 'tr';
+            final remoteLang = data?['language'] as String?;
 
-            final lang = langStr == 'tr' ? Language.tr : Language.en;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              LanguageController.instance.hydrateFromRemote(remoteLang);
+            });
+
+            final lang = LanguageController.instance.value;
 
             if (!completed) {
               return OnboardingPage(lang: lang);

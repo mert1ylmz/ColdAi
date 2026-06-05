@@ -282,6 +282,13 @@ class AppTexts {
       Language.tr: "Ürün analiz ediliyor...",
       Language.en: "Analyzing product...",
     },
+    "engine_gemini": {Language.tr: "Gemini", Language.en: "Gemini"},
+    "engine_offline": {Language.tr: "Çevrimdışı", Language.en: "Offline"},
+    "engine_ocr": {Language.tr: "OCR", Language.en: "OCR"},
+    "engine_selector": {
+      Language.tr: "Tanıma motoru",
+      Language.en: "Recognition engine",
+    },
     "api_connection_failed": {
       Language.tr: "API bağlantısı başarısız. Backend açık mı?",
       Language.en: "API connection failed. Is the backend running?",
