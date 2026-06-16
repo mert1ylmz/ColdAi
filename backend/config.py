@@ -2,12 +2,12 @@
 ColdAI — Merkezi Konfigürasyon
 
 Bu dosya tüm sistemin TEK DOĞRULUK KAYNAĞI (Single Source of Truth) dosyasıdır.
-Ürün sınıfları, model yolları, eşik değerleri ve TR↔EN eşleştirmeleri
+Ürün sınıfları, model yolu, eşik değerleri ve TR↔EN eşleştirmeleri
 burada tanımlanır. Diğer tüm modüller bu dosyayı referans alır.
 
-ÖNEMLİ: Sınıf listeleri ALFABETİK SIRALI olmalıdır.
-Keras image_dataset_from_directory klasörleri alfbetik sıralar ve
-model çıktı indeksleri bu sıraya göre eşleşir.
+ÖNEMLİ: CLASS_NAMES listesi eğitim sırasında üretilen
+training/output/efficientnet_v2b0_classes.json ile birebir aynı olmalıdır.
+image_dataset_from_directory alfabetik sıralar; sıra bozulursa tahminler yanlış eşleşir.
 """
 
 import os
@@ -16,55 +16,49 @@ from pathlib import Path
 # ──────────────────────────────────────────────
 # Dizin Yolları
 # ──────────────────────────────────────────────
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR     = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent
-MODELS_DIR = PROJECT_ROOT / "models"
+MODELS_DIR   = PROJECT_ROOT / "training" / "output"
 
 # ──────────────────────────────────────────────
-# Model Dosya Yolları
+# Model Dosya Yolu — tek model, 25 sınıf
 # ──────────────────────────────────────────────
-MODEL_PATHS = {
-    "main": MODELS_DIR / "ana_model.tflite",
-    "meyve": MODELS_DIR / "meyve_modeli_yeni.tflite",
-    "sebze": MODELS_DIR / "sebze_modeli_yeni.tflite",
-    "paketli": MODELS_DIR / "paketli_modeli_yeni.tflite",
-}
+MODEL_PATH = MODELS_DIR / "efficientnet_v2b0.keras"
 
 # ──────────────────────────────────────────────
 # Görüntü Ön-İşleme
 # ──────────────────────────────────────────────
 IMG_SIZE = (224, 224)
-# NOT: TFLite modelleri Rescaling katmanı içermez.
-# Normalizasyon (0-1 aralığına) preprocessing.py'de yapılır.
-# Ham piksel değerleri (0-255) preprocessing aşamasında 255'e bölünür.
+# EfficientNetV2B0, include_preprocessing=True ile eğitildi;
+# ham 0-255 piksel gönderilmeli, preprocessing.py'de normalizasyon yapılmamalı.
 
 # ──────────────────────────────────────────────
-# Ürün Sınıfları (Alfabetik — Model çıktı indeksleriyle birebir eşleşir)
+# Sınıf Listesi — eğitimden çıkan alfabetik sıra (değiştirme)
 # ──────────────────────────────────────────────
-PRODUCT_CLASSES = {
-    "meyve": [
-        "Banana", "Grape", "Mandarine", "Mango",
-        "Orange", "Peach", "Pear", "Pineapple", "Strawberry",
-    ],
-    "sebze": [
-        "Corn", "Cucumber", "Eggplant",
-        "Onion", "Pepper", "Potato", "Tomato",
-    ],
-    "paketli": [
-        "Chips", "Chocolate", "Coffee", "Juice",
-        "Milk", "Pasta", "Soda", "Tea", "Water",
-    ],
+CLASS_NAMES = [
+    "Banana", "Chips", "Chocolate", "Coffee", "Corn",
+    "Cucumber", "Eggplant", "Grape", "Juice", "Mandarine",
+    "Mango", "Milk", "Onion", "Orange", "Pasta",
+    "Peach", "Pear", "Pepper", "Pineapple", "Potato",
+    "Soda", "Strawberry", "Tea", "Tomato", "Water",
+]
+
+# Kategori eşlemesi — her ürünün hangi gruba ait olduğunu gösterir
+EN_TO_CATEGORY: dict[str, str] = {
+    "Banana": "meyve", "Grape": "meyve", "Mandarine": "meyve", "Mango": "meyve",
+    "Orange": "meyve", "Peach": "meyve", "Pear": "meyve",
+    "Pineapple": "meyve", "Strawberry": "meyve",
+    "Corn": "sebze", "Cucumber": "sebze", "Eggplant": "sebze",
+    "Onion": "sebze", "Pepper": "sebze", "Potato": "sebze", "Tomato": "sebze",
+    "Chips": "paketli", "Chocolate": "paketli", "Coffee": "paketli",
+    "Juice": "paketli", "Milk": "paketli", "Pasta": "paketli",
+    "Soda": "paketli", "Tea": "paketli", "Water": "paketli",
 }
 
-# Ana model kategorileri (alfabetik — image_dataset_from_directory sırası)
-MAIN_CATEGORIES = sorted(PRODUCT_CLASSES.keys())  # ['meyve', 'paketli', 'sebze']
-
 # ──────────────────────────────────────────────
-# Güven Skoru Eşikleri
+# Güven Skoru Eşiği
 # ──────────────────────────────────────────────
-MAIN_MODEL_THRESHOLD = 0.65   # Ana model kategori eşiği
-SUB_MODEL_THRESHOLD = 0.70    # Alt model ürün eşiği
-TOP2_GAP_THRESHOLD = 0.15     # İlk iki tahmin arası minimum fark
+CONFIDENCE_THRESHOLD = 0.70   # Altındaysa "bilinmeyen ürün" döner
 
 # ──────────────────────────────────────────────
 # Türkçe → İngilizce Ürün Eşleştirme Sözlüğü (OCR için)
@@ -128,17 +122,7 @@ TR_TO_EN_PRODUCT_MAP = {
     "memba suyu": "Water",
 }
 
-# ──────────────────────────────────────────────
-# Ters Eşleştirme Tabloları (Otomatik Üretilir)
-# ──────────────────────────────────────────────
-
-# İngilizce ad → Kategori
-EN_TO_CATEGORY: dict[str, str] = {}
-for _category, _products in PRODUCT_CLASSES.items():
-    for _product in _products:
-        EN_TO_CATEGORY[_product] = _category
-
-# İngilizce ad → Türkçe ad (ilk eşleşme)
+# İngilizce ad → Türkçe ad (TR_TO_EN_PRODUCT_MAP'ten otomatik üretilir)
 EN_TO_TR: dict[str, str] = {}
 for _tr, _en in TR_TO_EN_PRODUCT_MAP.items():
     if _en not in EN_TO_TR:

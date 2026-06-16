@@ -284,6 +284,7 @@ class AppTexts {
     },
     "engine_gemini": {Language.tr: "Gemini", Language.en: "Gemini"},
     "engine_offline": {Language.tr: "Çevrimdışı", Language.en: "Offline"},
+    "engine_backend": {Language.tr: "Sunucu", Language.en: "Backend"},
     "engine_ocr": {Language.tr: "OCR", Language.en: "OCR"},
     "engine_selector": {
       Language.tr: "Tanıma motoru",

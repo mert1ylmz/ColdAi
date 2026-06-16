@@ -66,9 +66,9 @@ class ProductResponse(BaseModel):
 
 class PredictResponse(BaseModel):
     """
-    İki aşamalı AI tahmin yanıtı.
+    EfficientNetV2B0 tek geçiş tahmin yanıtı.
 
-    is_known=True  → Ürün başarıyla tanındı
+    is_known=True  → Ürün başarıyla tanındı (güven >= eşik)
     is_known=False → Düşük güven veya bilinmeyen nesne
     """
     success: bool
@@ -78,7 +78,6 @@ class PredictResponse(BaseModel):
     confidence: Optional[float] = None
     is_known: bool
     message: Optional[str] = None
-    stage_failed: Optional[str] = None
 
 
 # ════════════════════════════════════════════

@@ -1,10 +1,11 @@
+# ──────────────────────────────────────────────
 # Python
+# ──────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-build/
 develop-eggs/
 dist/
 downloads/
@@ -20,32 +21,57 @@ wheels/
 *.egg
 MANIFEST
 
+# ──────────────────────────────────────────────
 # Virtual Environment
+# ──────────────────────────────────────────────
 venv/
 ENV/
 env/
 .env
+.venv-train/
+.venv/
 
+# ──────────────────────────────────────────────
 # Database
+# ──────────────────────────────────────────────
 *.db
 *.sqlite3
 
-# Models and Large Files
-# models/ dizinini ignore etme — Dart model dosyaları (recipe_model.dart vb.) tracked olmalı
-*.keras
-*.h5
-*.onnx
-*.weights
-*.pb
+# ──────────────────────────────────────────────
+# Training — Sadece model output dosyaları TRACKED
+# Eğitim scriptleri, veri setleri, loglar vb. ignore edilir.
+# Sadece training/output/ (model + class JSON) GitHub'a gider.
+# ──────────────────────────────────────────────
+training/*
+!training/output/
 
-# Dataset
+# ──────────────────────────────────────────────
+# Grafik çıktıları
+# ──────────────────────────────────────────────
+grafik/
+
+# ──────────────────────────────────────────────
+# Backend — Büyük veri setleri
+# NOT: Backend kodları (config.py, main.py, api/, ai/, db/ vb.)
+# TRACKED kalmalıdır — arkadaşın çalıştırması gerekir.
+# ──────────────────────────────────────────────
 backend/dataset/
 dataset/
 
-# IDEs
+# ──────────────────────────────────────────────
+# Mobile App — Büyük model asset'leri
+# ──────────────────────────────────────────────
+mobile_app/cold_assistant_ai/assets/models/
+mobile_app/cold_assistant_ai/assets/keras\ models/
+
+# ──────────────────────────────────────────────
+# OS & IDE
+# ──────────────────────────────────────────────
+.DS_Store
 .vscode/
 .idea/
-.DS_Store
 
+# ──────────────────────────────────────────────
 # Logs
+# ──────────────────────────────────────────────
 *.log

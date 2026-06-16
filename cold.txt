@@ -1,5 +1,0 @@
-yapay zeka sekmesi çalışırken sayfa yenilemeye bak 
-stok bilgilerini aı için json formatında arkada tut 
-tarifler kısmı wp deki gibi 
-askıda sayfası yap ara yerine dizayn wp mertte 
-son kullanma yaklaşan ürün  bildirimi ekle

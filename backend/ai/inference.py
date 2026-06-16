@@ -1,16 +1,12 @@
 """
-ColdAI — İki Aşamalı Expert Model Inference Pipeline (TFLite)
+ColdAI — EfficientNetV2B0 Tek Geçiş Inference Pipeline
+
+Eski iki aşamalı mimari (ana model → alt model) iptal edildi.
+Tek model 25 sınıfı doğrudan tahmin eder; kategori bilgisi
+config.py'deki EN_TO_CATEGORY tablosundan türetilir.
 
 Akış:
-  Görüntü → Ön-İşleme → Ana Model → Kategori (meyve/sebze/paketli)
-                                        ↓
-                          Güven ≥ 0.65?  → Hayır → "Bilinmeyen Kategori"
-                                        ↓ Evet
-                          Alt Model → Ürün Tahmini
-                                        ↓
-                          Güven ≥ 0.70?  → Hayır → "Bilinmeyen Ürün"
-                                        ↓ Evet
-                          Sonuç: {kategori, ürün, skor}
+    Görüntü → Ön-İşleme → EfficientNetV2B0 → Softmax → Sonuç
 """
 
 import asyncio
@@ -19,115 +15,67 @@ import logging
 
 from backend.ai.model_loader import model_cache
 from backend.ai.preprocessing import preprocess_image
-from backend.ai.confidence import check_confidence
-from backend.config import (
-    PRODUCT_CLASSES,
-    MAIN_CATEGORIES,
-    MAIN_MODEL_THRESHOLD,
-    SUB_MODEL_THRESHOLD,
-    TOP2_GAP_THRESHOLD,
-    EN_TO_TR,
-)
+from backend.config import CLASS_NAMES, EN_TO_CATEGORY, CONFIDENCE_THRESHOLD, EN_TO_TR
 
 logger = logging.getLogger(__name__)
 
 
-def _run_inference(model_key: str, img_array: np.ndarray) -> np.ndarray:
+def _run_inference(img_array: np.ndarray) -> np.ndarray:
     """
-    Senkron TFLite model inference.
-    TFLite invoke() CPU-bound olduğundan ayrı thread'de çalıştırılır.
+    Senkron Keras model inference.
+    model.predict() CPU-bound olduğundan ayrı thread'de çalıştırılır;
+    böylece FastAPI'nin async event loop'u bloklanmaz.
     """
-    model = model_cache.get_model(model_key)
-    predictions = model.predict(img_array)
-    return predictions
+    model = model_cache.get_model()
+    return model.predict(img_array)
 
 
 async def predict_product(image_bytes: bytes) -> dict:
     """
-    İki aşamalı Expert Model inference pipeline.
+    Tek geçiş inference pipeline.
 
     Args:
-        image_bytes: Ham görüntü byte verisi
+        image_bytes: Ham görüntü byte verisi (JPEG/PNG/WebP)
 
     Returns:
         dict: {
             success, category, product, product_tr,
-            confidence, is_known, message, stage_failed
+            confidence, is_known, message
         }
     """
-    # ── Ön-İşleme ──
     img_array = preprocess_image(image_bytes)
 
-    # ══════════════════════════════════════════
-    # AŞAMA 1: Kategori Tahmini (Ana Model)
-    # ══════════════════════════════════════════
-    main_probs = await asyncio.to_thread(_run_inference, "main", img_array)
+    probs = await asyncio.to_thread(_run_inference, img_array)
 
-    is_confident, main_confidence, reason = check_confidence(
-        main_probs, MAIN_MODEL_THRESHOLD, TOP2_GAP_THRESHOLD
+    top_idx      = int(np.argmax(probs))
+    confidence   = float(probs[top_idx])
+    product_name = CLASS_NAMES[top_idx]
+    category     = EN_TO_CATEGORY.get(product_name, "bilinmeyen")
+    product_tr   = EN_TO_TR.get(product_name, product_name)
+
+    logger.info(
+        f"Tahmin: {product_name} ({product_tr}) | "
+        f"kategori: {category} | güven: {confidence:.3f}"
     )
 
-    if not is_confident:
-        logger.warning(f"Ana model güvensiz: {reason}")
+    if confidence < CONFIDENCE_THRESHOLD:
+        logger.warning(f"Düşük güven ({confidence:.3f}) — eşik: {CONFIDENCE_THRESHOLD}")
         return {
             "success": True,
             "category": None,
             "product": None,
             "product_tr": None,
-            "confidence": round(main_confidence, 4),
+            "confidence": round(confidence, 4),
             "is_known": False,
-            "message": "Ürün kategorisi yeterli güvenle belirlenemedi. Lütfen tekrar deneyin.",
-            "stage_failed": "category",
+            "message": "Ürün yeterli güvenle tanınamadı. Lütfen tekrar deneyin.",
         }
-
-    category_idx = int(np.argmax(main_probs))
-    category = MAIN_CATEGORIES[category_idx]
-    logger.info(
-        f"Aşama 1 — Kategori: {category} "
-        f"(güven: {main_confidence:.3f}, indeks: {category_idx})"
-    )
-
-    # ══════════════════════════════════════════
-    # AŞAMA 2: Ürün Tahmini (Alt Model)
-    # ══════════════════════════════════════════
-    sub_probs = await asyncio.to_thread(_run_inference, category, img_array)
-
-    is_confident, sub_confidence, reason = check_confidence(
-        sub_probs, SUB_MODEL_THRESHOLD, TOP2_GAP_THRESHOLD
-    )
-
-    if not is_confident:
-        logger.warning(f"Alt model ({category}) güvensiz: {reason}")
-        return {
-            "success": True,
-            "category": category,
-            "product": None,
-            "product_tr": None,
-            "confidence": round(sub_confidence, 4),
-            "is_known": False,
-            "message": (
-                f"Kategori '{category}' olarak belirlendi "
-                f"ancak ürün yeterli güvenle tanınamadı."
-            ),
-            "stage_failed": "product",
-        }
-
-    product_idx = int(np.argmax(sub_probs))
-    product_name = PRODUCT_CLASSES[category][product_idx]
-    product_tr = EN_TO_TR.get(product_name, product_name)
-
-    logger.info(
-        f"Aşama 2 — Ürün: {product_name} ({product_tr}) "
-        f"(güven: {sub_confidence:.3f}, indeks: {product_idx})"
-    )
 
     return {
         "success": True,
         "category": category,
         "product": product_name,
         "product_tr": product_tr,
-        "confidence": round(sub_confidence, 4),
+        "confidence": round(confidence, 4),
         "is_known": True,
         "message": None,
-        "stage_failed": None,
     }

@@ -20,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.db.database import init_db, async_session
 from backend.db.crud import seed_products
-from backend.config import PRODUCT_CLASSES, TR_TO_EN_PRODUCT_MAP
+from backend.config import CLASS_NAMES, TR_TO_EN_PRODUCT_MAP
 from backend.ai.model_loader import model_cache
 
 logging.basicConfig(
@@ -44,13 +44,13 @@ async def lifespan(app: FastAPI):
 
     # 2. Ürün seed
     async with async_session() as db:
-        await seed_products(db, PRODUCT_CLASSES, TR_TO_EN_PRODUCT_MAP)
-    logger.info("✅ 28 ürün veritabanına eklendi")
+        await seed_products(db, CLASS_NAMES, TR_TO_EN_PRODUCT_MAP)
+    logger.info("✅ Ürünler veritabanına eklendi")
 
-    # 3. AI modelleri
-    logger.info("⏳ AI modelleri yükleniyor (bu biraz sürebilir)...")
-    model_cache.preload_all()
-    logger.info("✅ Tüm AI modelleri hazır")
+    # 3. AI modeli
+    logger.info("⏳ EfficientNetV2B0 yükleniyor (bu biraz sürebilir)...")
+    model_cache.preload()
+    logger.info("✅ Model hazır")
 
     logger.info("🟢 ColdAI Backend çalışıyor — http://localhost:8000/docs")
 
@@ -69,11 +69,11 @@ app = FastAPI(
     description=(
         "Akıllı buzdolabı stok yönetimi.\n\n"
         "**Özellikler:**\n"
-        "- 📸 Kamera ile ürün tanıma (MobileNetV2, 28 sınıf)\n"
+        "- 📸 Kamera ile ürün tanıma (EfficientNetV2B0, 25 sınıf — tek geçiş)\n"
         "- 🧾 Fiş okuma (Tesseract OCR + Fuzzy Matching)\n"
         "- 📦 Envanter yönetimi (CRUD)\n"
         "- 🔐 JWT kimlik doğrulama\n\n"
-        "**Desteklenen Ürünler:** 10 meyve, 8 sebze, 10 paketli ürün"
+        "**Desteklenen Ürünler:** 9 meyve, 7 sebze, 9 paketli ürün"
     ),
     version="1.0.0",
     lifespan=lifespan,

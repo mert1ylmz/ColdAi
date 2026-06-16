@@ -2,7 +2,7 @@
 ColdAI — AI Görüntü Tahmin API Route'ları
 
 Endpoint:
-  POST /api/v1/predict → Görüntüden ürün tanıma (2 aşamalı Expert Model)
+  POST /api/v1/predict → Görüntüden ürün tanıma (EfficientNetV2B0 tek geçiş)
 """
 
 from fastapi import APIRouter, UploadFile, File, HTTPException
@@ -20,13 +20,12 @@ async def predict(image: UploadFile = File(...)):
     """
     Görüntüden ürün tanıma.
 
-    **İki aşamalı Expert Model pipeline:**
-    1. **Ana Model** → Kategori tahmini (meyve / sebze / paketli)
-    2. **Alt Model** → Spesifik ürün tahmini (28 sınıftan biri)
+    **EfficientNetV2B0 tek geçiş pipeline:**
+    - Tek model 25 sınıfı doğrudan tahmin eder.
+    - Kategori bilgisi (meyve / sebze / paketli) `config.EN_TO_CATEGORY`'den türetilir.
 
     **Güvenlik katmanı:**
-    - Güven skoru eşik değerinin altındaysa `is_known=false` döner
-    - `stage_failed` alanı hangi aşamada başarısız olduğunu gösterir
+    - Güven skoru eşik değerinin altındaysa `is_known=false` döner.
 
     **Desteklenen formatlar:** JPEG, PNG, WebP (maks. 10MB)
     """

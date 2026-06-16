@@ -1,125 +1,77 @@
 """
-ColdAI — TFLite Model Loader
+ColdAI — Keras Model Loader
 
-Singleton pattern ile TFLite modellerini belleğe yükler ve cache'ler.
-İlk istek geldiğinde lazy loading yapar, sonraki isteklerde
-cache'ten döndürür. Uygulama başlangıcında preload_all() ile
-tüm modeller önceden yüklenebilir.
+Singleton pattern ile EfficientNetV2B0 modelini belleğe yükler.
+Uygulama başlangıcında preload() çağrılır; sonraki tüm istekler
+cache'ten model alır — her istekte disk okuması yapılmaz.
 """
 
 import numpy as np
 import logging
+import tensorflow as tf
 
-try:
-    # Önce hafif tflite-runtime paketini dene
-    import tflite_runtime.interpreter as tflite
-    Interpreter = tflite.Interpreter
-except ImportError:
-    # Yoksa tam TensorFlow'dan TFLite interpreter'ı al
-    import tensorflow as tf
-    Interpreter = tf.lite.Interpreter
-
-from backend.config import MODEL_PATHS
+from backend.config import MODEL_PATH, IMG_SIZE
 
 logger = logging.getLogger(__name__)
 
 
-class TFLiteModel:
-    """Tek bir TFLite modelini saran wrapper sınıf."""
+class KerasModel:
+    """EfficientNetV2B0 Keras modelini saran wrapper."""
 
-    def __init__(self, model_path: str, model_key: str):
-        self.model_key = model_key
-        self.interpreter = Interpreter(model_path=str(model_path))
-        self.interpreter.allocate_tensors()
+    def __init__(self, model_path):
+        if not model_path.exists():
+            raise FileNotFoundError(f"Model dosyası bulunamadı: {model_path}")
 
-        self.input_details = self.interpreter.get_input_details()
-        self.output_details = self.interpreter.get_output_details()
-
-        input_shape = self.input_details[0]['shape']
-        output_shape = self.output_details[0]['shape']
+        logger.info(f"Keras model yükleniyor: {model_path}")
+        self.model = tf.keras.models.load_model(str(model_path), compile=False)
 
         logger.info(
-            f"TFLite model yüklendi: {model_key} — "
-            f"giriş: {input_shape}, çıkış: {output_shape}"
+            f"Model yüklendi — "
+            f"giriş: {self.model.input_shape}, çıkış: {self.model.output_shape}"
         )
 
     def predict(self, img_array: np.ndarray) -> np.ndarray:
         """
-        TFLite modeli ile tahmin yap.
+        Tek görüntü için softmax olasılık vektörü döndürür.
 
         Args:
-            img_array: (1, 224, 224, 3) şeklinde float32 numpy array
+            img_array: (1, 224, 224, 3) uint8 veya float32 numpy array.
+                       Model include_preprocessing=True ile eğitildiğinden
+                       ham 0-255 değerleri gönderilebilir.
 
         Returns:
-            Softmax çıktı vektörü (1D array)
+            25 elemanlı softmax çıktı vektörü (1D array).
         """
-        # Giriş verisinin dtype'ını modelin beklediğiyle eşle
-        input_dtype = self.input_details[0]['dtype']
-        if img_array.dtype != input_dtype:
-            img_array = img_array.astype(input_dtype)
-
-        self.interpreter.set_tensor(self.input_details[0]['index'], img_array)
-        self.interpreter.invoke()
-
-        output = self.interpreter.get_tensor(self.output_details[0]['index'])
-        return output[0]  # Batch boyutunu kaldır
+        probs = self.model.predict(img_array, verbose=0)
+        return probs[0]
 
 
 class ModelCache:
-    """Singleton cache for loaded TFLite models."""
+    """Singleton: tek model instance'ı uygulama boyunca paylaşılır."""
 
     _instance = None
-    _models: dict[str, TFLiteModel] = {}
+    _model: KerasModel | None = None
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance._models = {}
         return cls._instance
 
-    def get_model(self, model_key: str) -> TFLiteModel:
-        """
-        Modeli cache'ten döndür. Yüklenmemişse yükle.
+    def preload(self) -> None:
+        """Uygulamanın başlangıcında modeli yükle."""
+        if self._model is None:
+            self._model = KerasModel(MODEL_PATH)
+            logger.info("✅ EfficientNetV2B0 belleğe yüklendi")
 
-        Args:
-            model_key: "main", "meyve", "sebze" veya "paketli"
+    def get_model(self) -> KerasModel:
+        """Yüklenmiş model instance'ını döndür."""
+        if self._model is None:
+            self.preload()
+        return self._model
 
-        Returns:
-            Yüklenmiş TFLiteModel instance
-
-        Raises:
-            FileNotFoundError: Model dosyası bulunamazsa
-            ValueError: Geçersiz model anahtarı
-        """
-        if model_key not in self._models:
-            path = MODEL_PATHS.get(model_key)
-            if path is None:
-                raise ValueError(
-                    f"Geçersiz model anahtarı: '{model_key}'. "
-                    f"Geçerli anahtarlar: {list(MODEL_PATHS.keys())}"
-                )
-            if not path.exists():
-                raise FileNotFoundError(
-                    f"Model dosyası bulunamadı: {path}"
-                )
-
-            logger.info(f"TFLite model yükleniyor: {model_key} — {path}")
-            self._models[model_key] = TFLiteModel(str(path), model_key)
-
-        return self._models[model_key]
-
-    def preload_all(self) -> None:
-        """Tüm modelleri başlangıçta belleğe yükle."""
-        for key in MODEL_PATHS:
-            self.get_model(key)
-        logger.info(
-            f"Tüm modeller yüklendi: {list(MODEL_PATHS.keys())} "
-            f"(toplam {len(self._models)} model)"
-        )
-
-    def is_loaded(self, model_key: str) -> bool:
-        """Model cache'te mevcut mu?"""
-        return model_key in self._models
+    @property
+    def is_loaded(self) -> bool:
+        return self._model is not None
 
 
 # Global singleton instance

@@ -7,11 +7,11 @@ import '../../../core/localization/app_texts.dart';
 import '../../../core/localization/language.dart';
 import '../../../core/theme/app_colors.dart';
 import '../services/detected_product_mapper.dart';
+import '../services/prediction_api_service.dart';
 import '../services/product_detection_service.dart';
-import '../services/tflite_product_detection_service.dart';
 import 'detected_product_edit_page.dart';
 
-enum ProductEngine { gemini, tflite }
+enum ProductEngine { gemini, backend }
 
 const _kProductEnginePrefKey = 'product_engine';
 
@@ -33,7 +33,7 @@ class _ScanProductPageState extends State<ScanProductPage> {
 
   final ImagePicker picker = ImagePicker();
   final _geminiService = ProductDetectionService();
-  final _tfliteService = TfliteProductDetectionService();
+  final _backendService = PredictionApiService();
 
   @override
   void initState() {
@@ -43,15 +43,15 @@ class _ScanProductPageState extends State<ScanProductPage> {
 
   @override
   void dispose() {
-    _tfliteService.dispose();
+    _backendService.dispose();
     super.dispose();
   }
 
   Future<void> _loadEnginePref() async {
     final prefs = await SharedPreferences.getInstance();
     final saved = prefs.getString(_kProductEnginePrefKey);
-    if (saved == ProductEngine.tflite.name && mounted) {
-      setState(() => _engine = ProductEngine.tflite);
+    if (saved == ProductEngine.backend.name && mounted) {
+      setState(() => _engine = ProductEngine.backend);
     }
   }
 
@@ -80,7 +80,7 @@ class _ScanProductPageState extends State<ScanProductPage> {
 
     final result = _engine == ProductEngine.gemini
         ? await _geminiService.detectProduct(_image!)
-        : await _tfliteService.detectProduct(_image!);
+        : await _backendService.detectProduct(_image!);
 
     if (!mounted) return;
 
@@ -280,9 +280,9 @@ class _ScanProductPageState extends State<ScanProductPage> {
           icon: const Icon(Icons.cloud_outlined, size: 18),
         ),
         ButtonSegment(
-          value: ProductEngine.tflite,
-          label: Text(AppTexts.of("engine_offline", lang)),
-          icon: const Icon(Icons.memory_rounded, size: 18),
+          value: ProductEngine.backend,
+          label: Text(AppTexts.of("engine_backend", lang)),
+          icon: const Icon(Icons.dns_rounded, size: 18),
         ),
       ],
       selected: {_engine},

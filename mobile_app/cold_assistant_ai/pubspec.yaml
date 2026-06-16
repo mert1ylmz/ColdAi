@@ -40,7 +40,6 @@ dependencies:
   shared_preferences: ^2.3.2
 
   # On-device ML
-  tflite_flutter: ^0.11.0
   image: ^4.3.0
   google_mlkit_text_recognition: ^0.15.0
 
@@ -53,7 +52,6 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
-    - assets/models/
 
 flutter_native_splash:
   color: "#FFFFFF"
