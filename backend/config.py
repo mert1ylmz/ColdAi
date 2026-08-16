@@ -24,19 +24,19 @@ MODELS_DIR = PROJECT_ROOT / "models"
 # Model Dosya Yolları
 # ──────────────────────────────────────────────
 MODEL_PATHS = {
-    "main": MODELS_DIR / "ana_model_yenilenen (1).keras",
-    "meyve": MODELS_DIR / "meyve_modeli_yeni (1).keras",
-    "sebze": MODELS_DIR / "sebze_modeli_yeni (1).keras",
-    "paketli": MODELS_DIR / "paketli_modeli_yeni (1).keras",
+    "main": MODELS_DIR / "ana_model.tflite",
+    "meyve": MODELS_DIR / "meyve_modeli_yeni.tflite",
+    "sebze": MODELS_DIR / "sebze_modeli_yeni.tflite",
+    "paketli": MODELS_DIR / "paketli_modeli_yeni.tflite",
 }
 
 # ──────────────────────────────────────────────
 # Görüntü Ön-İşleme
 # ──────────────────────────────────────────────
 IMG_SIZE = (224, 224)
-# NOT: Modellerin içinde Rescaling(1./255) katmanı var.
-# Inference sırasında görüntüleri ayrıca normalize ETMEYİN.
-# Ham piksel değerleri (0-255 float32) doğrudan modele verilir.
+# NOT: TFLite modelleri Rescaling katmanı içermez.
+# Normalizasyon (0-1 aralığına) preprocessing.py'de yapılır.
+# Ham piksel değerleri (0-255) preprocessing aşamasında 255'e bölünür.
 
 # ──────────────────────────────────────────────
 # Ürün Sınıfları (Alfabetik — Model çıktı indeksleriyle birebir eşleşir)

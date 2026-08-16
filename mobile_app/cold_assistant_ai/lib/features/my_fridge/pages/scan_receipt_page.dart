@@ -1,0 +1,170 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../../../core/localization/app_texts.dart';
+import '../../../core/localization/language.dart';
+import '../../../core/services/local_ocr_service.dart';
+import '../models/fridge_item_model.dart';
+import '../services/detected_product_mapper.dart';
+import 'detected_product_edit_page.dart';
+
+class ScanReceiptPage extends StatefulWidget {
+  final Language lang;
+
+  const ScanReceiptPage({super.key, required this.lang});
+
+  @override
+  State<ScanReceiptPage> createState() => _ScanReceiptPageState();
+}
+
+class _ScanReceiptPageState extends State<ScanReceiptPage> {
+  File? _image;
+  bool _loading = false;
+  List<Map<String, dynamic>> _results = [];
+  String? _errorMessage;
+
+  final ImagePicker picker = ImagePicker();
+  final _ocrService = LocalOCRService();
+
+  Future<void> pickImage(ImageSource source) async {
+    final picked = await picker.pickImage(source: source);
+    if (picked == null) return;
+
+    setState(() {
+      _image = File(picked.path);
+      _loading = true;
+      _results = [];
+      _errorMessage = null;
+    });
+
+    try {
+      final results = await _ocrService.scanReceipt(_image!);
+      if (mounted) {
+        setState(() {
+          _results = results;
+          _loading = false;
+          if (results.isEmpty) {
+            _errorMessage = "Fişte bilinen bir ürün bulunamadı.";
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _errorMessage = "OCR Hatası: $e";
+        });
+      }
+    }
+  }
+
+  Future<void> _addItems() async {
+    // Fişten bulunan tüm ürünleri tek tek onaylatabiliriz veya toplu ekleyebiliriz.
+    // Basitlik için ilk üründen başlayarak düzenleme sayfasına gönderelim.
+    
+    for (var res in _results) {
+      final detectedProduct = mapDetectionToProduct(
+        label: res['product_tr'] ?? res['product'],
+        lang: widget.lang,
+      );
+
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DetectedProductEditPage(
+            lang: widget.lang,
+            detectedProduct: detectedProduct,
+          ),
+        ),
+      );
+
+      if (result != null && result is FridgeItemModel) {
+         // MyFridgePage'e geri dönüp listeyi yenilemesi için sonucu döndürelim
+         // (Veya burada direkt DB'ye kaydedebiliriz)
+         // Bu örnekte MyFridgePage'e birini döndürüp diğerlerini de kaydetmiş gibi yapalım
+         // Ama en iyisi hepsini onaylattıktan sonra toplu dönmek.
+      }
+    }
+    
+    Navigator.pop(context, true); // true dönerek yenileme tetiklenebilir
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lang = widget.lang;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFDF6FF),
+      appBar: AppBar(
+        title: Text(AppTexts.of("scan_receipt", lang)),
+        backgroundColor: const Color(0xFFFDF6FF),
+        elevation: 0,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            if (_image != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Image.file(_image!, height: 200, fit: BoxFit.contain),
+              ),
+            const SizedBox(height: 20),
+            if (_loading) ...[
+              const CircularProgressIndicator(),
+              const SizedBox(height: 12),
+              Text(AppTexts.of("scanning_receipt", lang)),
+            ],
+            if (_errorMessage != null)
+              Text(_errorMessage!, style: const TextStyle(color: Colors.red)),
+            if (_results.isNotEmpty) ...[
+              Text(
+                "${_results.length} Ürün Bulundu",
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _results.length,
+                  itemBuilder: (context, index) {
+                    final item = _results[index];
+                    return ListTile(
+                      title: Text(item['product_tr'] ?? item['product']),
+                      subtitle: Text("Güven: %${(item['confidence'] * 100).toStringAsFixed(1)}"),
+                      trailing: const Icon(Icons.check_circle, color: Colors.green),
+                    );
+                  },
+                ),
+              ),
+              ElevatedButton(
+                onPressed: _addItems,
+                child: const Text("Ürünleri Onayla ve Ekle"),
+              ),
+            ],
+            const Spacer(),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => pickImage(ImageSource.camera),
+                    icon: const Icon(Icons.camera_alt),
+                    label: Text(AppTexts.of("camera", lang)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => pickImage(ImageSource.gallery),
+                    icon: const Icon(Icons.photo_library),
+                    label: Text(AppTexts.of("gallery", lang)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

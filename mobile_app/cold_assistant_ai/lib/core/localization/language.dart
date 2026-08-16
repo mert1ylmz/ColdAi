@@ -1,0 +1,1 @@
+enum Language { tr, en }
