@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "95113090396",
+    "project_id": "cold-assistant-ai",
+    "storage_bucket": "cold-assistant-ai.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:95113090396:android:65a27626222700db0c1d99",
+        "android_client_info": {
+          "package_name": "com.example.cold_assistant_ai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC03apm8x_mRuREZSmdZnjk6Bn_4ybKstI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

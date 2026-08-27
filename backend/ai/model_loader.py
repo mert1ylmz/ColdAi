@@ -1,156 +1,77 @@
 """
 ColdAI — Keras Model Loader
 
-Singleton pattern ile modelleri belleğe yükler ve cache'ler.
-İlk istek geldiğinde lazy loading yapar, sonraki isteklerde
-cache'ten döndürür. Uygulama başlangıcında preload_all() ile
-tüm modeller önceden yüklenebilir.
+Singleton pattern ile EfficientNetV2B0 modelini belleğe yükler.
+Uygulama başlangıcında preload() çağrılır; sonraki tüm istekler
+cache'ten model alır — her istekte disk okuması yapılmaz.
 """
 
-import os
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
-
-import tensorflow as tf
-from backend.config import MODEL_PATHS, MAIN_CATEGORIES, PRODUCT_CLASSES
+import numpy as np
 import logging
+import tensorflow as tf
+
+from backend.config import MODEL_PATH, IMG_SIZE
 
 logger = logging.getLogger(__name__)
 
-def build_coldai_model(model_key: str, num_classes: int) -> tf.keras.Model:
-    """
-    Modelleri kod ile yeniden inşa eder.
-    Her modelin eğitim adımındaki spesifik Dense ve Dropout oranlarını uygular.
-    """
-    # Base model: MobileNetV2 (weights=None kullanıyoruz, pretrained indirmesin)
-    base_model = tf.keras.applications.MobileNetV2(
-        input_shape=(224, 224, 3), 
-        include_top=False, 
-        weights=None
-    )
-    base_model.trainable = False
-    
-    # 🔥 Modele göre mimariyi belirle
-    if model_key == "main":
-        dense_units = 128
-        dropout_rate = 0.2
-    elif model_key == "meyve":
-        dense_units = 256
-        dropout_rate = 0.3
-    elif model_key == "sebze":
-        dense_units = 256
-        dropout_rate = 0.4
-    elif model_key == "paketli":
-        dense_units = 512
-        dropout_rate = 0.5
-    else:
-        raise ValueError(f"Bilinmeyen model tipi: {model_key}")
-        
-    model = tf.keras.Sequential([
-        tf.keras.layers.Rescaling(1./255, input_shape=(224, 224, 3)),
-        base_model,
-        tf.keras.layers.GlobalAveragePooling2D(),
-        tf.keras.layers.Dense(dense_units, activation='relu'),
-        tf.keras.layers.Dropout(dropout_rate),
-        tf.keras.layers.Dense(num_classes, activation='softmax')
-    ])
-    
-    return model
+
+class KerasModel:
+    """EfficientNetV2B0 Keras modelini saran wrapper."""
+
+    def __init__(self, model_path):
+        if not model_path.exists():
+            raise FileNotFoundError(f"Model dosyası bulunamadı: {model_path}")
+
+        logger.info(f"Keras model yükleniyor: {model_path}")
+        self.model = tf.keras.models.load_model(str(model_path), compile=False)
+
+        logger.info(
+            f"Model yüklendi — "
+            f"giriş: {self.model.input_shape}, çıkış: {self.model.output_shape}"
+        )
+
+    def predict(self, img_array: np.ndarray) -> np.ndarray:
+        """
+        Tek görüntü için softmax olasılık vektörü döndürür.
+
+        Args:
+            img_array: (1, 224, 224, 3) uint8 veya float32 numpy array.
+                       Model include_preprocessing=True ile eğitildiğinden
+                       ham 0-255 değerleri gönderilebilir.
+
+        Returns:
+            25 elemanlı softmax çıktı vektörü (1D array).
+        """
+        probs = self.model.predict(img_array, verbose=0)
+        return probs[0]
 
 
 class ModelCache:
-    """Singleton cache for loaded Keras models."""
+    """Singleton: tek model instance'ı uygulama boyunca paylaşılır."""
 
     _instance = None
-    _models: dict[str, tf.keras.Model] = {}
+    _model: KerasModel | None = None
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._instance._models = {}
         return cls._instance
 
-    def get_model(self, model_key: str) -> tf.keras.Model:
-        """
-        Modeli cache'ten döndür. Yüklenmemişse yükle.
+    def preload(self) -> None:
+        """Uygulamanın başlangıcında modeli yükle."""
+        if self._model is None:
+            self._model = KerasModel(MODEL_PATH)
+            logger.info("✅ EfficientNetV2B0 belleğe yüklendi")
 
-        Args:
-            model_key: "main", "meyve", "sebze" veya "paketli"
+    def get_model(self) -> KerasModel:
+        """Yüklenmiş model instance'ını döndür."""
+        if self._model is None:
+            self.preload()
+        return self._model
 
-        Returns:
-            Yüklenmiş Keras modeli
-
-        Raises:
-            FileNotFoundError: Model dosyası bulunamazsa
-            ValueError: Geçersiz model anahtarı
-        """
-        if model_key not in self._models:
-            path = MODEL_PATHS.get(model_key)
-            if path is None:
-                raise ValueError(
-                    f"Geçersiz model anahtarı: '{model_key}'. "
-                    f"Geçerli anahtarlar: {list(MODEL_PATHS.keys())}"
-                )
-            if not path.exists():
-                raise FileNotFoundError(
-                    f"Model dosyası bulunamadı: {path}"
-                )
-
-            # Kaç sınıflı model yükleyeceğimizi bulalım
-            if model_key == "main":
-                num_classes = len(MAIN_CATEGORIES)
-            else:
-                num_classes = len(PRODUCT_CLASSES.get(model_key, []))
-
-            # Sınıf sayısını config'den al
-            if model_key == "main":
-                num_classes_config = len(MAIN_CATEGORIES)
-            else:
-                num_classes_config = len(PRODUCT_CLASSES.get(model_key, []))
-
-            logger.info(f"Model inşa ediliyor: {model_key} (Config beklenen: {num_classes_config} sınıf) — {path}")
-            
-            try:
-                # Önce config'deki sayıyla dene
-                model = build_coldai_model(model_key, num_classes_config)
-                model.load_weights(str(path))
-            except ValueError as e:
-                error_msg = str(e)
-                # Gelen tensor hatasından actual class sayısını (eğitilmiş ağırlıktaki gerçek sayıyı) çek
-                # Örnek: "variable.shape=(256, 10), Received: value.shape=(256, 9)"
-                import re
-                match = re.search(r"Received: value\.shape=\(\d+, (\d+)\)", error_msg)
-                if match:
-                    actual_classes = int(match.group(1))
-                    logger.critical(
-                        f"🚨 KRİTİK UYARI 🚨\n"
-                        f"{model_key} modeli için config.py'de {num_classes_config} sınıf tanımlı, "
-                        f"ANCAK model {actual_classes} sınıfla eğitilmiş!\n"
-                        f"Çökmeyi önlemek için {actual_classes} sınıfla çalıştırılıyor. "
-                        f"Klasörlerden biri eksik olabilir. Lütfen config.py veya dataset'ini eşitle!"
-                    )
-                    # Gerçek sayıyla yeniden inşa et
-                    model = build_coldai_model(model_key, actual_classes)
-                    model.load_weights(str(path))
-                else:
-                    raise e
-            
-            self._models[model_key] = model
-            logger.info(f"Model ağırlıkları başarıyla yüklendi: {model_key}")
-
-        return self._models[model_key]
-
-    def preload_all(self) -> None:
-        """Tüm modelleri başlangıçta belleğe yükle."""
-        for key in MODEL_PATHS:
-            self.get_model(key)
-        logger.info(
-            f"Tüm modeller yüklendi: {list(MODEL_PATHS.keys())} "
-            f"(toplam {len(self._models)} model)"
-        )
-
-    def is_loaded(self, model_key: str) -> bool:
-        """Model cache'te mevcut mu?"""
-        return model_key in self._models
+    @property
+    def is_loaded(self) -> bool:
+        return self._model is not None
 
 
 # Global singleton instance

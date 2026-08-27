@@ -69,29 +69,31 @@ async def get_product_by_name(db: AsyncSession, name: str) -> Product | None:
 
 async def seed_products(
     db: AsyncSession,
-    product_classes: dict[str, list[str]],
+    class_names: list[str],
     tr_map: dict[str, str],
 ) -> None:
     """
-    PRODUCT_CLASSES sözlüğündeki 28 ürünü veritabanına ekle.
+    CLASS_NAMES listesindeki ürünleri veritabanına ekle (varsayılan: 25 sınıf).
+    Kategori bilgisi EN_TO_CATEGORY tablosundan alınır.
     Zaten mevcutsa atla.
     """
+    from backend.config import EN_TO_CATEGORY
+
     # EN → TR ters eşleştirme (ilk eşleşmeyi al)
     en_to_tr: dict[str, str] = {}
     for tr_name, en_name in tr_map.items():
         if en_name not in en_to_tr:
             en_to_tr[en_name] = tr_name
 
-    for category, products in product_classes.items():
-        for product_name in products:
-            existing = await get_product_by_name(db, product_name)
-            if existing is None:
-                product = Product(
-                    name=product_name,
-                    name_tr=en_to_tr.get(product_name),
-                    category=category,
-                )
-                db.add(product)
+    for product_name in class_names:
+        existing = await get_product_by_name(db, product_name)
+        if existing is None:
+            product = Product(
+                name=product_name,
+                name_tr=en_to_tr.get(product_name),
+                category=EN_TO_CATEGORY.get(product_name, "bilinmeyen"),
+            )
+            db.add(product)
 
     await db.commit()
 
